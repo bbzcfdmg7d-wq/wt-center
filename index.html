@@ -56,6 +56,79 @@
     color:var(--text-light);
     margin-top:4px;
   }
+  .sync-status{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:6px;
+    transition:color 0.3s;
+  }
+  .sync-status.syncing{color:var(--blue-text);}
+  .sync-status.success{color:var(--accent);}
+  .sync-status.error{color:#e0938a;}
+  /* 同步设置弹层 */
+  .sync-modal{
+    position:fixed;
+    top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.5);
+    z-index:1000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .sync-modal-content{
+    background:#fff;
+    border-radius:16px;
+    padding:24px 20px;
+    max-width:360px;
+    width:100%;
+  }
+  .sync-modal-content h3{
+    font-size:17px;
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .sync-desc{
+    font-size:13px;
+    color:var(--text-light);
+    margin-bottom:14px;
+  }
+  .sync-modal-btns{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+  }
+  .sync-cancel-btn{
+    flex:1;
+    border:1.5px solid var(--border);
+    background:#fff;
+    color:var(--text-light);
+    padding:11px;
+    border-radius:10px;
+    font-size:14px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .sync-save-btn{
+    flex:1;
+    border:none;
+    background:var(--accent);
+    color:#fff;
+    padding:11px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .sync-help{
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid var(--border);
+    font-size:12px;
+    color:var(--text-light);
+    line-height:1.8;
+  }
   .page{display:none;}
   .page.active{display:block;}
   .section{margin-bottom:20px;}
@@ -756,6 +829,26 @@
   <div class="header">
     <h1 id="pageTitle">体重记录</h1>
     <p id="pageSubtitle">记录每一天的变化</p>
+    <div id="syncStatus" class="sync-status" onclick="showSyncSetup()">☁️ 点击配置云端同步</div>
+  </div>
+
+  <!-- 同步设置弹层 -->
+  <div id="syncModal" class="sync-modal" style="display:none;">
+    <div class="sync-modal-content">
+      <h3>数据同步设置</h3>
+      <p class="sync-desc">输入 GitHub Token 开启云端同步，数据将自动备份，换设备也不丢失。</p>
+      <input type="text" id="tokenInput" class="form-input" placeholder="ghp_xxxxxxxxxxxx" style="text-align:left;font-size:14px;">
+      <div class="sync-modal-btns">
+        <button class="sync-cancel-btn" onclick="hideSyncSetup()">取消</button>
+        <button class="sync-save-btn" onclick="saveSyncToken()">保存</button>
+      </div>
+      <div class="sync-help">
+        <p>获取 Token 步骤：</p>
+        <p>1. 打开 github.com/settings/tokens/new</p>
+        <p>2. 勾选 repo 权限，生成 token</p>
+        <p>3. 复制 token 粘贴到上方输入框</p>
+      </div>
+    </div>
   </div>
 
   <!-- 页面1：录入 -->
@@ -975,6 +1068,7 @@
   }
   function saveRecords(records){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    pushToGitHub();
   }
   function loadGoal(){
     var g = localStorage.getItem(GOAL_KEY);
@@ -982,6 +1076,7 @@
   }
   function saveGoal(v){
     localStorage.setItem(GOAL_KEY, String(v));
+    pushToGitHub();
   }
   function loadPeriods(){
     try{
@@ -994,6 +1089,106 @@
   }
   function savePeriods(periods){
     localStorage.setItem(PERIOD_KEY, JSON.stringify(periods.slice().sort()));
+    pushToGitHub();
+  }
+
+  // ====== GitHub 云端同步 ======
+  // Token 不嵌入代码，从 localStorage 读取（用户在设置页输入）
+  var GH_TOKEN = localStorage.getItem('gh_sync_token') || '';
+  var GH_OWNER = 'bbzcfdmg7d-wq';
+  var GH_REPO = 'wt-center';
+  var GH_DATA_PATH = 'data.json';
+  var GH_API = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_DATA_PATH;
+  var GH_DATA_SHA_KEY = 'gh_data_sha';
+  var syncTimer = null;
+  var suppressPush = false; // 拉取时抑制推送
+
+  // 收集所有数据为一个对象
+  function collectAllData(){
+    return {
+      records: loadRecords(),
+      goal: loadGoal(),
+      periods: loadPeriods(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  // 推送到 GitHub（防抖：3秒内多次保存只推一次）
+  function pushToGitHub(){
+    if(suppressPush) return;
+    if(!GH_TOKEN) return; // 未配置 token，不同步
+    if(syncTimer) clearTimeout(syncTimer);
+    var statusEl = document.getElementById('syncStatus');
+    if(statusEl){ statusEl.textContent = '☁️ 同步中...'; statusEl.className = 'sync-status syncing'; }
+    syncTimer = setTimeout(function(){
+      var data = collectAllData();
+      var content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+      var sha = localStorage.getItem(GH_DATA_SHA_KEY) || '';
+
+      var body = JSON.stringify({
+        message: 'Auto sync: ' + new Date().toLocaleString('zh-CN'),
+        content: content,
+        branch: 'main'
+      });
+      if(sha) body = JSON.stringify({
+        message: 'Auto sync: ' + new Date().toLocaleString('zh-CN'),
+        content: content,
+        branch: 'main',
+        sha: sha
+      });
+
+      fetch(GH_API, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token ' + GH_TOKEN,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: body
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if(d.commit){
+          localStorage.setItem(GH_DATA_SHA_KEY, d.commit.sha);
+          console.log('✅ 已同步到云端');
+          if(statusEl){ statusEl.textContent = '✅ 已同步到云端'; statusEl.className = 'sync-status success'; }
+        }
+      }).catch(function(e){
+        console.log('同步失败（不影响本地使用）:', e);
+        if(statusEl){ statusEl.textContent = '⚠️ 同步失败，数据已保存在本地'; statusEl.className = 'sync-status error'; }
+      });
+    }, 3000);
+  }
+
+  // 从 GitHub 拉取数据
+  function pullFromGitHub(callback){
+    if(!GH_TOKEN){ if(callback) callback(false); return; }
+    var statusEl = document.getElementById('syncStatus');
+    if(statusEl){ statusEl.textContent = '☁️ 正在从云端获取数据...'; statusEl.className = 'sync-status syncing'; }
+    fetch(GH_API, {
+      headers: {
+        'Authorization': 'token ' + GH_TOKEN,
+        'Accept': 'application/vnd.github+json'
+      }
+    }).then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(d){
+      if(!d.content) throw new Error('No content');
+      localStorage.setItem(GH_DATA_SHA_KEY, d.sha);
+      var raw = decodeURIComponent(escape(atob(d.content.replace(/\n/g, ''))));
+      var data = JSON.parse(raw);
+      suppressPush = true;
+      if(data.records) saveRecords(data.records);
+      if(data.goal !== undefined) saveGoal(data.goal);
+      if(data.periods) savePeriods(data.periods);
+      suppressPush = false;
+      console.log('✅ 已从云端恢复数据');
+      if(statusEl){ statusEl.textContent = '✅ 数据已从云端恢复'; statusEl.className = 'sync-status success'; }
+      if(callback) callback(true);
+    }).catch(function(e){
+      console.log('云端无数据或拉取失败:', e);
+      if(statusEl){ statusEl.textContent = '☁️ 云端暂无数据，将自动同步'; statusEl.className = 'sync-status'; }
+      if(callback) callback(false);
+    });
   }
 
   // ====== 工具函数 ======
@@ -1685,9 +1880,28 @@
   }
 
   // ====== 初始化 ======
+  // 先用本地数据渲染（快速显示）
   renderPeriodList();
   prefillForm();
   renderAll();
+
+  // 检查是否已配置 token
+  if(!GH_TOKEN){
+    var statusEl0 = document.getElementById('syncStatus');
+    if(statusEl0){ statusEl0.textContent = '☁️ 点击配置云端同步'; statusEl0.className = 'sync-status'; }
+  } else {
+    // 已配置，从云端拉取最新数据
+    pullFromGitHub(function(success){
+      if(success){
+        state.records = loadRecords();
+        state.goal = loadGoal();
+        state.periods = loadPeriods();
+        renderPeriodList();
+        prefillForm();
+        renderAll();
+      }
+    });
+  }
 
   var resizeTimer;
   window.addEventListener('resize', function(){
@@ -1696,6 +1910,27 @@
   });
 
 })();
+
+// 同步设置弹层（IIFE 外部，供 onclick 调用）
+function showSyncSetup(){
+  var modal = document.getElementById('syncModal');
+  var input = document.getElementById('tokenInput');
+  input.value = localStorage.getItem('gh_sync_token') || '';
+  modal.style.display = 'flex';
+}
+function hideSyncSetup(){
+  document.getElementById('syncModal').style.display = 'none';
+}
+function saveSyncToken(){
+  var token = document.getElementById('tokenInput').value.trim();
+  if(!token){ alert('请输入 Token'); return; }
+  localStorage.setItem('gh_sync_token', token);
+  document.getElementById('syncModal').style.display = 'none';
+  var statusEl = document.getElementById('syncStatus');
+  if(statusEl){ statusEl.textContent = '☁️ 正在从云端获取数据...'; statusEl.className = 'sync-status syncing'; }
+  // 刷新页面以加载 token 并触发同步
+  location.reload();
+}
 </script>
 </body>
 </html>
