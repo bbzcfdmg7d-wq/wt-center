@@ -19,7 +19,7 @@
     --pink:#f4cdd9;
     --pink-bg:#fdeef2;
     --pink-text:#d4869a;
-    --pink-dash:#e88aa0;
+    --pink-dash:#f0b5c4;
     --blue:#b3d1f0;
     --blue-bg:#e8f0fe;
     --blue-text:#6b9fd8;
@@ -374,16 +374,16 @@
     gap:4px;
   }
   .cal-day{
-    height:68px;
+    height:64px;
     border-radius:8px;
     display:flex;
     flex-direction:column;
     align-items:center;
+    justify-content:flex-start;
     color:var(--text);
     position:relative;
     background:var(--bg);
-    padding:4px 2px;
-    overflow:hidden;
+    padding:3px 2px;
   }
   .cal-day.has-record{
     background:#fff;
@@ -757,6 +757,10 @@
         <div class="stat-item">
           <div class="stat-label">距目标差值</div>
           <div class="stat-value pink" id="statGoal">— <span class="unit">斤</span></div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">BMI 指数</div>
+          <div class="stat-value gray" id="statBMI">— <span class="unit">身高154cm</span></div>
         </div>
       </div>
       <div class="calendar-wrap">
@@ -1257,12 +1261,14 @@
     var initialEl = document.getElementById('statInitial');
     var lossEl = document.getElementById('statLoss');
     var goalEl = document.getElementById('statGoal');
+    var bmiEl = document.getElementById('statBMI');
 
     if(sorted.length === 0){
       latestEl.innerHTML = '— <span class="unit">斤</span>';
       initialEl.innerHTML = '— <span class="unit">斤</span>';
       lossEl.innerHTML = '— <span class="unit">斤</span>';
       goalEl.innerHTML = '— <span class="unit">斤</span>';
+      bmiEl.innerHTML = '— <span class="unit">身高154cm</span>';
       return;
     }
 
@@ -1284,6 +1290,21 @@
       goalEl.innerHTML = '未设置 <span class="unit"></span>';
       goalEl.className = 'stat-value gray';
     }
+
+    // BMI 计算：身高固定 154cm
+    // 体重单位是斤，需要转换成 kg（1斤=0.5kg）
+    var HEIGHT_M = 1.54;
+    var weightKg = latest.weight * 0.5;
+    var bmi = weightKg / (HEIGHT_M * HEIGHT_M);
+    var bmiStr = bmi.toFixed(1);
+    var bmiCls = 'gray';
+    var bmiLabel = '';
+    if(bmi < 18.5){ bmiCls = 'gray'; bmiLabel = '偏瘦'; }
+    else if(bmi < 24){ bmiCls = 'green'; bmiLabel = '正常'; }
+    else if(bmi < 28){ bmiCls = 'pink'; bmiLabel = '偏胖'; }
+    else { bmiCls = 'pink'; bmiLabel = '肥胖'; }
+    bmiEl.innerHTML = bmiStr + ' <span class="unit">' + bmiLabel + '</span>';
+    bmiEl.className = 'stat-value ' + bmiCls;
   }
 
   // ====== 日历 ======
@@ -1358,12 +1379,12 @@
           html += '<div class="row-bot flat" style="opacity:0;">—0.0</div>';
         }
       } else {
-        // 预测经期格子
+        // 预测经期格子（只保留粉色虚线框，不显示"预测"文字）
         if(predicted[dateStr]){
           html += '<div style="position:relative;width:100%;text-align:center;">';
           html += '<span class="row-top">'+d+'</span>';
           html += '</div>';
-          html += '<div class="row-mid" style="color:var(--pink-dash);">预测</div>';
+          html += '<div class="row-mid" style="opacity:0;">0.0</div>';
           html += '<div class="row-bot flat" style="opacity:0;">—0.0</div>';
         } else {
           // 普通空格子（保持三行高度一致）
