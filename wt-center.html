@@ -295,33 +295,37 @@
   .stats-grid{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:10px;
+    gap:8px;
     margin-bottom:14px;
   }
   .stat-item{
     background:var(--card);
     border-radius:14px;
-    padding:14px 16px;
+    padding:13px 14px;
     box-shadow:var(--shadow);
+    border:1px solid var(--border);
   }
   .stat-label{
-    font-size:12px;
+    font-size:11px;
     color:var(--text-light);
-    margin-bottom:4px;
+    margin-bottom:3px;
+    letter-spacing:0.2px;
   }
   .stat-value{
-    font-size:22px;
-    font-weight:700;
+    font-size:17px;
+    font-weight:600;
     color:var(--text);
+    letter-spacing:-0.3px;
+    line-height:1.2;
   }
   .stat-value .unit{
-    font-size:13px;
+    font-size:11px;
     font-weight:400;
-    color:var(--text-light);
+    color:var(--text-dim);
     margin-left:2px;
   }
   .stat-value.green{color:var(--accent);}
-  .stat-value.pink{color:#d4869a;}
+  .stat-value.pink{color:var(--pink-text);}
   .stat-value.gray{color:var(--text-light);}
   /* Calendar */
   .calendar-wrap{
@@ -371,11 +375,11 @@
   .calendar-grid{
     display:grid;
     grid-template-columns:repeat(7,1fr);
-    gap:4px;
+    gap:5px;
   }
   .cal-day{
-    height:64px;
-    border-radius:8px;
+    aspect-ratio:1 / 1;
+    border-radius:10px;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -383,7 +387,9 @@
     color:var(--text);
     position:relative;
     background:var(--bg);
-    padding:3px 2px;
+    padding:4px 2px 2px;
+    min-height:0;
+    overflow:hidden;
   }
   .cal-day.has-record{
     background:#fff;
@@ -423,11 +429,12 @@
     font-weight:500;
   }
   .cal-day .row-bot{
-    font-size:9px;
+    font-size:8px;
     line-height:1.1;
     color:var(--text-light);
     margin-top:2px;
-    font-weight:600;
+    font-weight:500;
+    letter-spacing:-0.3px;
   }
   .cal-day .row-bot.down{color:#3a8a72;}
   .cal-day .row-bot.up{color:#c45a5a;}
