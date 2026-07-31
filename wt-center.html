@@ -375,7 +375,7 @@
   .calendar-grid{
     display:grid;
     grid-template-columns:repeat(7,1fr);
-    gap:5px;
+    gap:4px;
   }
   .cal-day{
     aspect-ratio:1 / 1;
@@ -387,7 +387,7 @@
     color:var(--text);
     position:relative;
     background:var(--bg);
-    padding:4px 2px 2px;
+    padding:3px 2px 2px;
     min-height:0;
     overflow:hidden;
   }
@@ -425,14 +425,14 @@
     font-size:9px;
     line-height:1.1;
     color:var(--text-light);
-    margin-top:3px;
+    margin-top:2px;
     font-weight:500;
   }
   .cal-day .row-bot{
     font-size:8px;
-    line-height:1.1;
+    line-height:1;
     color:var(--text-light);
-    margin-top:2px;
+    margin-top:1px;
     font-weight:500;
     letter-spacing:-0.3px;
   }
@@ -759,10 +759,6 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">当前生理周期阶段（自动识别）</label>
-          <div id="autoPhaseDisplay"></div>
-        </div>
-        <div class="form-group">
           <label class="form-label">是否运动</label>
           <div class="toggle-group" id="sportGroup">
             <button class="toggle-btn active" data-sport="no">未运动</button>
@@ -801,6 +797,10 @@
               <input type="number" id="m_calf" class="mi-input" placeholder="—" step="0.1" min="0" max="100">
             </div>
           </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">当前生理周期阶段（自动识别）</label>
+          <div id="autoPhaseDisplay"></div>
         </div>
         <button class="submit-btn" id="submitBtn">保存记录</button>
       </div>
@@ -897,7 +897,7 @@
           <thead>
             <tr>
               <th class="sticky-col">日期</th>
-              <th>体重<br><span class="th-unit">(斤)</span></th>
+              <th>体重</th>
               <th>胸围</th>
               <th>腰围</th>
               <th>腹围</th>
