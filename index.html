@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>体重记录</title>
+<style>
+  :root{
+    --bg:#f7f6f3;
+    --card:#ffffff;
+    --text:#3d3d3d;
+    --text-light:#9a9a9a;
+    --text-dim:#c4c4c4;
+    --accent:#7eb3a5;
+    --accent-light:#e8f3ef;
+    --pink:#f4cdd9;
+    --pink-bg:#fdeef2;
+    --pink-text:#d4869a;
+    --blue:#b3d1f0;
+    --blue-bg:#e8f0fe;
+    --blue-text:#6b9fd8;
+    --yellow:#f0dfa0;
+    --yellow-bg:#fff8e6;
+    --yellow-text:#c9a83a;
+    --border:#f0eee9;
+    --shadow:0 2px 12px rgba(0,0,0,0.04);
+    --radius:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:40px;
+  }
+  .container{max-width:480px;margin:0 auto;padding:0 16px;}
+  .header{
+    text-align:center;
+    padding:28px 0 20px;
+  }
+  .header h1{
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:0.5px;
+    color:var(--text);
+  }
+  .header p{
+    font-size:13px;
+    color:var(--text-light);
+    margin-top:4px;
+  }
+  .section{margin-bottom:20px;}
+  .section-title{
+    font-size:15px;
+    font-weight:600;
+    color:var(--text);
+    margin-bottom:10px;
+    padding-left:4px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .section-title .dot{
+    width:6px;height:6px;border-radius:50%;background:var(--accent);
+  }
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:22px;
+    box-shadow:var(--shadow);
+  }
+  /* Form */
+  .form-group{margin-bottom:20px;}
+  .form-group:last-child{margin-bottom:0;}
+  .form-label{
+    display:block;
+    font-size:13px;
+    color:var(--text-light);
+    margin-bottom:8px;
+    font-weight:500;
+    text-align:center;
+  }
+  .form-input{
+    width:100%;
+    border:1.5px solid var(--border);
+    border-radius:14px;
+    padding:16px 18px;
+    font-size:16px;
+    color:var(--text);
+    text-align:center;
+    background:var(--bg);
+    transition:border-color 0.2s;
+    font-family:inherit;
+  }
+  .form-input:focus{
+    outline:none;
+    border-color:var(--accent);
+    background:#fff;
+  }
+  .form-row{display:flex;gap:14px;}
+  .form-row .form-group{flex:1;min-width:0;}
+  .toggle-group{display:flex;gap:6px;}
+  .toggle-btn{
+    flex:1;
+    border:1.5px solid var(--border);
+    background:var(--bg);
+    padding:10px;
+    border-radius:12px;
+    font-size:14px;
+    color:var(--text-light);
+    cursor:pointer;
+    transition:all 0.2s;
+    font-family:inherit;
+  }
+  .toggle-btn.active{
+    border-color:var(--accent);
+    background:var(--accent-light);
+    color:var(--accent);
+    font-weight:600;
+  }
+  .submit-btn{
+    width:100%;
+    border:none;
+    background:var(--accent);
+    color:#fff;
+    padding:14px;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:18px;
+    transition:opacity 0.2s;
+    font-family:inherit;
+  }
+  .submit-btn:active{opacity:0.85; }
+  /* Auto phase badge */
+  .phase-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:6px 12px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+    margin-top:2px;
+  }
+  .phase-badge .badge-dot{
+    width:7px;height:7px;border-radius:50%;
+  }
+  .phase-badge.period{background:var(--pink-bg);color:var(--pink-text);}
+  .phase-badge.period .badge-dot{background:var(--pink);}
+  .phase-badge.ovulation{background:var(--blue-bg);color:var(--blue-text);}
+  .phase-badge.ovulation .badge-dot{background:var(--blue);}
+  .phase-badge.luteal{background:var(--yellow-bg);color:var(--yellow-text);}
+  .phase-badge.luteal .badge-dot{background:var(--yellow);}
+  .phase-badge.none{background:var(--bg);color:var(--text-light);}
+  .phase-badge.none .badge-dot{background:var(--text-dim);}
+  .phase-hint{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:4px;
+  }
+  /* Period dates management */
+  .period-card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .period-input-row{
+    display:flex;
+    gap:12px;
+    align-items:flex-end;
+  }
+  .period-input-row .form-group{flex:1;margin-bottom:0;min-width:0;}
+  .period-add-btn{
+    border:none;
+    background:var(--pink-text);
+    color:#fff;
+    padding:16px 24px;
+    border-radius:14px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+    font-family:inherit;
+    flex-shrink:0;
+    box-shadow:0 2px 8px rgba(212,134,154,0.3);
+  }
+  .period-add-btn:active{opacity:0.85;}
+  .period-list{
+    margin-top:14px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .period-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--pink-bg);
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .period-item-info{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:var(--pink-text);
+  }
+  .period-item-info .cycle-info{
+    font-size:11px;
+    color:var(--text-light);
+  }
+  .period-delete{
+    border:none;
+    background:transparent;
+    color:var(--text-dim);
+    font-size:16px;
+    cursor:pointer;
+    padding:4px 8px;
+    line-height:1;
+    font-family:inherit;
+  }
+  .period-delete:active{color:#e0938a;}
+  .period-empty{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-top:10px;
+    text-align:center;
+  }
+  .period-predict{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px 14px;
+    font-size:11px;
+    color:var(--text-light);
+    padding:2px 12px 8px;
+  }
+  .period-predict b{
+    color:var(--pink-text);
+    font-weight:600;
+  }
+  /* Stats */
+  .stats-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .stat-item{
+    background:var(--card);
+    border-radius:14px;
+    padding:14px 16px;
+    box-shadow:var(--shadow);
+  }
+  .stat-label{
+    font-size:12px;
+    color:var(--text-light);
+    margin-bottom:4px;
+  }
+  .stat-value{
+    font-size:22px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .stat-value .unit{
+    font-size:13px;
+    font-weight:400;
+    color:var(--text-light);
+    margin-left:2px;
+  }
+  .stat-value.green{color:var(--accent);}
+  .stat-value.pink{color:#d4869a;}
+  .stat-value.gray{color:var(--text-light);}
+  /* Calendar */
+  .calendar-wrap{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:16px 14px 12px;
+    box-shadow:var(--shadow);
+  }
+  .calendar-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+    padding:0 4px;
+  }
+  .cal-title{
+    font-size:15px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .cal-nav-btn{
+    border:none;
+    background:var(--bg);
+    width:32px;height:32px;
+    border-radius:8px;
+    font-size:18px;
+    color:var(--text-light);
+    cursor:pointer;
+    line-height:1;
+    font-family:inherit;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .cal-nav-btn:active{background:var(--accent-light);color:var(--accent);}
+  .calendar-weekdays{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    text-align:center;
+    margin-bottom:6px;
+  }
+  .calendar-weekdays span{
+    font-size:11px;
+    color:var(--text-dim);
+    padding:4px 0;
+  }
+  .calendar-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:3px;
+  }
+  .cal-day{
+    aspect-ratio:1;
+    border-radius:8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    color:var(--text);
+    position:relative;
+    background:var(--bg);
+    min-height:48px;
+    padding:2px;
+  }
+  .cal-day.has-record{
+    background:#fff;
+    color:var(--text);
+    font-weight:700;
+  }
+  .cal-day.phase-period{background:var(--pink-bg);}
+  .cal-day.phase-ovulation{background:var(--blue-bg);}
+  .cal-day.phase-luteal{background:var(--yellow-bg);}
+  .cal-day.has-record.phase-period{background:var(--pink-bg);color:var(--pink-text);}
+  .cal-day.has-record.phase-ovulation{background:var(--blue-bg);color:var(--blue-text);}
+  .cal-day.has-record.phase-luteal{background:var(--yellow-bg);color:var(--yellow-text);}
+  .cal-day.today{
+    border:1.5px solid var(--accent);
+  }
+  .cal-day .day-num{
+    font-size:16px;
+    line-height:1.1;
+    font-weight:500;
+  }
+  .cal-day .day-weight{
+    font-size:9px;
+    margin-top:2px;
+    line-height:1;
+    color:var(--text-light);
+  }
+  .cal-day .day-diff{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    font-weight:600;
+    line-height:1;
+    padding:2px 4px;
+    border-radius:4px;
+    margin-top:1px;
+  }
+  .cal-day .day-diff.down{background:#d6f0e8;color:#3a8a72;}
+  .cal-day .day-diff.up{background:#fbdfe0;color:#c45a5a;}
+  .cal-day .day-diff.flat{background:var(--border);color:var(--text-light);}
+  .cal-day .sport-mark{
+    position:absolute;
+    bottom:2px;left:50%;
+    transform:translateX(-50%);
+    font-size:10px;
+    line-height:1;
+    color:#e05858;
+  }
+  .cal-day.empty{
+    background:transparent;
+  }
+  .chart-legend{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin-top:8px;
+    font-size:11px;
+    color:var(--text-light);
+  }
+  .legend-item{display:flex;align-items:center;gap:4px;}
+  .legend-dot{width:8px;height:8px;border-radius:50%;}
+  /* History */
+  .toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+    padding:0 4px;
+  }
+  .toolbar .count{
+    font-size:13px;
+    color:var(--text-light);
+  }
+  .export-btn{
+    border:1.5px solid var(--accent);
+    background:#fff;
+    color:var(--accent);
+    padding:7px 14px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .export-btn:active{background:var(--accent-light);}
+  .history-list{display:flex;flex-direction:column;gap:8px;}
+  .history-item{
+    background:var(--card);
+    border-radius:14px;
+    padding:14px 16px;
+    box-shadow:var(--shadow);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    transition:transform 0.15s;
+  }
+  .history-item:active{transform:scale(0.98);}
+  .history-left{flex:1;}
+  .history-date{
+    font-size:15px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .history-meta{
+    font-size:12px;
+    color:var(--text-light);
+    margin-top:2px;
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .tag{
+    display:inline-block;
+    padding:1px 7px;
+    border-radius:5px;
+    font-size:11px;
+  }
+  .tag-period{background:var(--pink-bg);color:var(--pink-text);}
+  .tag-ovulation{background:var(--blue-bg);color:var(--blue-text);}
+  .tag-luteal{background:var(--yellow-bg);color:var(--yellow-text);}
+  .tag-sport{background:var(--accent-light);color:var(--accent);}
+  .history-weight{
+    text-align:right;
+    margin-right:12px;
+  }
+  .history-weight .num{
+    font-size:18px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .history-weight .unit{
+    font-size:12px;
+    color:var(--text-light);
+  }
+  .history-diff{
+    font-size:11px;
+    margin-top:2px;
+  }
+  .history-diff.down{color:var(--accent);}
+  .history-diff.up{color:#e0938a;}
+  .history-diff.flat{color:var(--text-dim);}
+  .delete-btn{
+    border:none;
+    background:transparent;
+    color:var(--text-dim);
+    font-size:18px;
+    cursor:pointer;
+    padding:6px;
+    line-height:1;
+    font-family:inherit;
+  }
+  .delete-btn:active{color:#e0938a;}
+  .empty-state{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--text-light);
+    font-size:14px;
+  }
+  /* Toast */
+  .toast{
+    position:fixed;
+    bottom:30px;
+    left:50%;
+    transform:translateX(-50%) translateY(100px);
+    background:var(--text);
+    color:#fff;
+    padding:10px 22px;
+    border-radius:24px;
+    font-size:14px;
+    z-index:999;
+    opacity:0;
+    transition:all 0.3s;
+    pointer-events:none;
+  }
+  .toast.show{
+    transform:translateX(-50%) translateY(0);
+    opacity:1;
+  }
+  /* Goal setting */
+  .goal-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:10px;
+    padding:0 4px;
+  }
+  .goal-row .label{
+    font-size:12px;
+    color:var(--text-light);
+  }
+  .goal-input{
+    width:70px;
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    padding:6px 8px;
+    font-size:14px;
+    text-align:center;
+    background:var(--bg);
+    font-family:inherit;
+    color:var(--text);
+  }
+  .goal-input:focus{outline:none;border-color:var(--accent);}
+  .goal-save{
+    border:none;
+    background:var(--accent-light);
+    color:var(--accent);
+    padding:6px 12px;
+    border-radius:8px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>体重记录</h1>
+    <p>记录每一天的变化</p>
+  </div>
+
+  <!-- 经期日期管理 -->
+  <div class="section">
+    <div class="section-title"><span class="dot" style="background:var(--pink)"></span> 经期日期管理</div>
+    <div class="period-card">
+      <div class="form-group">
+        <label class="form-label">经期开始日期</label>
+        <input type="date" id="periodDateInput" class="form-input">
+      </div>
+      <button class="period-add-btn" id="periodAddBtn" style="width:100%;margin-bottom:0;">添加经期日期</button>
+      <div class="period-list" id="periodList"></div>
+      <div class="phase-hint" style="margin-top:10px;">填写经期开始日期后，系统按30天周期推算：下次月经=末次+30天，排卵日=下次月经前14天，排卵期=排卵日±5~1天，黄体期=排卵期后至下次月经前</div>
+    </div>
+  </div>
+
+  <!-- 录入表单 -->
+  <div class="section">
+    <div class="section-title"><span class="dot"></span> 录入体重</div>
+    <div class="card">
+      <div class="form-group">
+        <label class="form-label">日期 / 体重</label>
+        <div class="toggle-group" style="gap:8px;">
+          <input type="date" id="dateInput" class="form-input" style="flex:1;min-width:0;">
+          <input type="number" id="weightInput" class="form-input" placeholder="120斤" step="0.1" min="20" max="500" style="flex:1;min-width:0;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">当前生理周期阶段（自动识别）</label>
+        <div id="autoPhaseDisplay"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">是否运动</label>
+        <div class="toggle-group" id="sportGroup">
+          <button class="toggle-btn active" data-sport="no">未运动</button>
+          <button class="toggle-btn" data-sport="yes">已运动</button>
+        </div>
+      </div>
+      <button class="submit-btn" id="submitBtn">保存记录</button>
+    </div>
+  </div>
+
+  <!-- 统计板块 -->
+  <div class="section">
+    <div class="section-title"><span class="dot"></span> 数据概览</div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-label">最新体重</div>
+        <div class="stat-value" id="statLatest">— <span class="unit">斤</span></div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">初始体重</div>
+        <div class="stat-value gray" id="statInitial">— <span class="unit">斤</span></div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">累计减重</div>
+        <div class="stat-value green" id="statLoss">— <span class="unit">斤</span></div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">距目标差值</div>
+        <div class="stat-value pink" id="statGoal">— <span class="unit">斤</span></div>
+      </div>
+    </div>
+    <div class="calendar-wrap">
+      <div class="calendar-header">
+        <button class="cal-nav-btn" id="calPrevBtn">‹</button>
+        <span class="cal-title" id="calTitle">2026年8月</span>
+        <button class="cal-nav-btn" id="calNextBtn">›</button>
+      </div>
+      <div class="calendar-weekdays">
+        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:var(--pink)"></span> 经期</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span> 排卵期</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--yellow)"></span> 黄体期</div>
+        <div class="legend-item"><span style="color:#e05858;font-size:12px;line-height:1;">❤</span> 运动日</div>
+      </div>
+    </div>
+    <div class="goal-row">
+      <span class="label">目标体重：</span>
+      <input type="number" id="goalInput" class="goal-input" placeholder="斤" step="0.1" min="20" max="500">
+      <span class="label">斤</span>
+      <button class="goal-save" id="goalSaveBtn">设置</button>
+    </div>
+  </div>
+
+  <!-- 历史列表 -->
+  <div class="section">
+    <div class="toolbar">
+      <span class="count" id="historyCount">共 0 条记录</span>
+      <button class="export-btn" id="exportBtn">导出 CSV</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  // ====== 数据层 ======
+  var STORAGE_KEY = 'weight_records_v1';
+  var GOAL_KEY = 'weight_goal_v1';
+  var PERIOD_KEY = 'period_dates_v1';
+
+  function loadRecords(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      var arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return [];
+      return arr;
+    }catch(e){ return []; }
+  }
+  function saveRecords(records){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+  function loadGoal(){
+    var g = localStorage.getItem(GOAL_KEY);
+    return g ? parseFloat(g) : null;
+  }
+  function saveGoal(v){
+    localStorage.setItem(GOAL_KEY, String(v));
+  }
+  function loadPeriods(){
+    try{
+      var raw = localStorage.getItem(PERIOD_KEY);
+      if(!raw) return [];
+      var arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return [];
+      return arr.sort();
+    }catch(e){ return []; }
+  }
+  function savePeriods(periods){
+    localStorage.setItem(PERIOD_KEY, JSON.stringify(periods.slice().sort()));
+  }
+
+  // ====== 工具函数 ======
+  function todayStr(){
+    var d = new Date();
+    var m = String(d.getMonth()+1).padStart(2,'0');
+    var day = String(d.getDate()).padStart(2,'0');
+    return d.getFullYear()+'-'+m+'-'+day;
+  }
+  function formatDate(dateStr){
+    if(!dateStr) return '';
+    var parts = dateStr.split('-');
+    return parts[1]+'.'+parts[2];
+  }
+  function dateStrToDate(dateStr){
+    return new Date(dateStr + 'T00:00:00');
+  }
+  function daysBetween(dateStr1, dateStr2){
+    var d1 = dateStrToDate(dateStr1);
+    var d2 = dateStrToDate(dateStr2);
+    return Math.round((d2 - d1) / (24 * 3600 * 1000));
+  }
+  function addDays(dateStr, n){
+    var d = dateStrToDate(dateStr);
+    d.setDate(d.getDate() + n);
+    var y = d.getFullYear();
+    var m = String(d.getMonth()+1).padStart(2,'0');
+    var day = String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+day;
+  }
+  function phaseLabel(phase){
+    switch(phase){
+      case 'period': return '经期';
+      case 'ovulation': return '排卵期';
+      case 'luteal': return '黄体期';
+      default: return '卵泡期';
+    }
+  }
+
+  // ====== 生理周期推算 ======
+  // 默认周期30天，以"下次预估月经来潮日"为锚点倒推：
+  //   下次月经来潮日 = 末次月经日期 + 30天
+  //   排卵日 = 下次月经来潮日 - 14天
+  //   排卵期 = 排卵日前5天 ~ 排卵日后1天
+  //   黄体期 = 排卵期结束次日 ~ 下次月经来潮前一天
+  //   经期 = 末次月经日期 ~ +7天
+  //   卵泡期 = 经期结束次日 ~ 排卵期开始前一天
+  var CYCLE_LENGTH = 30;
+  var PERIOD_DAYS = 7;
+
+  // 计算某次经期开始日对应的下次预估月经来潮日
+  function getNextPeriodDate(lastPeriodDate){
+    return addDays(lastPeriodDate, CYCLE_LENGTH);
+  }
+
+  // 计算排卵日 = 下次月经来潮日 - 14天
+  function getOvulationDate(lastPeriodDate){
+    return addDays(getNextPeriodDate(lastPeriodDate), -14);
+  }
+
+  function getPhaseForDate(dateStr){
+    var periods = state.periods.slice().sort();
+    if(periods.length === 0) return 'none';
+
+    // 找到 <= dateStr 的最后一个经期开始日
+    var basePeriod = null;
+    var nextPeriod = null;
+    for(var i=0;i<periods.length;i++){
+      if(periods[i] <= dateStr){
+        basePeriod = periods[i];
+        nextPeriod = (i+1 < periods.length) ? periods[i+1] : null;
+      }
+    }
+
+    if(!basePeriod) return 'none'; // dateStr 在所有经期之前
+
+    // 如果有下一个已记录的经期，且当前日期已进入下一个周期
+    if(nextPeriod){
+      var nextOffset = daysBetween(nextPeriod, dateStr);
+      if(nextOffset >= 0){
+        return getPhaseForDateInner(nextPeriod, dateStr);
+      }
+    }
+
+    return getPhaseForDateInner(basePeriod, dateStr);
+  }
+
+  function getPhaseForDateInner(lastPeriodDate, dateStr){
+    var dayOffset = daysBetween(lastPeriodDate, dateStr); // 0 = 经期第1天
+
+    // 经期：第1-7天 (0-6)
+    if(dayOffset <= PERIOD_DAYS - 1) return 'period';
+
+    // 计算关键日期
+    var nextPeriod = getNextPeriodDate(lastPeriodDate);
+    var ovulationDay = getOvulationDate(lastPeriodDate);      // 排卵日
+    var ovulationStart = addDays(ovulationDay, -5);            // 排卵期开始
+    var ovulationEnd = addDays(ovulationDay, 1);               // 排卵期结束
+    var lutealStart = addDays(ovulationEnd, 1);                // 黄体期开始
+    var lutealEnd = addDays(nextPeriod, -1);                   // 黄体期结束（下次月经前一天）
+
+    var dateTarget = dateStrToDate(dateStr);
+
+    // 排卵期：排卵日前5天 ~ 排卵日后1天
+    if(dateStr >= ovulationStart && dateStr <= ovulationEnd) return 'ovulation';
+
+    // 黄体期：排卵期结束次日 ~ 下次月经来前一天
+    if(dateStr >= lutealStart && dateStr <= lutealEnd) return 'luteal';
+
+    // 卵泡期：经期结束次日 ~ 排卵期开始前一天
+    return 'none';
+  }
+
+  function getCycleDay(dateStr){
+    var periods = state.periods.slice().sort();
+    if(periods.length === 0) return null;
+
+    var basePeriod = null;
+    for(var i=0;i<periods.length;i++){
+      if(periods[i] <= dateStr){
+        basePeriod = periods[i];
+      }
+    }
+    if(!basePeriod) return null;
+    return daysBetween(basePeriod, dateStr) + 1;
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2000);
+  }
+
+  // ====== 状态 ======
+  var state = {
+    records: loadRecords(),
+    goal: loadGoal(),
+    periods: loadPeriods(),
+    selectedSport: 'no'
+  };
+
+  // ====== 经期日期管理 ======
+  var periodDateInput = document.getElementById('periodDateInput');
+  periodDateInput.value = todayStr();
+
+  document.getElementById('periodAddBtn').addEventListener('click', function(){
+    var date = periodDateInput.value;
+    if(!date){ showToast('请选择日期'); return; }
+    if(state.periods.indexOf(date) !== -1){ showToast('该日期已存在'); return; }
+    state.periods.push(date);
+    savePeriods(state.periods);
+    renderPeriodList();
+    updateAutoPhase();
+    renderAll();
+    showToast('经期日期已添加');
+  });
+
+  function renderPeriodList(){
+    var list = document.getElementById('periodList');
+    if(state.periods.length === 0){
+      list.innerHTML = '<div class="period-empty">尚未添加经期日期</div>';
+      return;
+    }
+    var sorted = state.periods.slice().sort();
+    var html = '';
+    for(var i=0;i<sorted.length;i++){
+      var d = sorted[i];
+      var cycleInfo = '';
+      // 显示距今天数
+      var diff = daysBetween(d, todayStr());
+      if(diff === 0) cycleInfo = '今天';
+      else if(diff > 0) cycleInfo = diff + '天后';
+      else cycleInfo = Math.abs(diff) + '天前';
+
+      // 计算下次预估月经来潮日和排卵日
+      var nextPeriod = getNextPeriodDate(d);
+      var ovulationDay = getOvulationDate(d);
+      var nextDiff = daysBetween(nextPeriod, todayStr());
+      var nextInfo = '';
+      if(nextDiff === 0) nextInfo = '今天';
+      else if(nextDiff > 0) nextInfo = nextDiff + '天后';
+      else nextInfo = Math.abs(nextDiff) + '天前';
+
+      html += '<div class="period-item">';
+      html += '<div class="period-item-info">';
+      html += '<span>'+d+'</span>';
+      html += '<span class="cycle-info">'+cycleInfo+'</span>';
+      html += '</div>';
+      html += '<button class="period-delete" data-date="'+d+'">×</button>';
+      html += '</div>';
+      // 预估信息行
+      html += '<div class="period-predict">';
+      html += '<span>下次月经预估：<b>'+nextPeriod+'</b>（'+nextInfo+'）</span>';
+      html += '<span>排卵日：<b>'+ovulationDay+'</b></span>';
+      html += '</div>';
+    }
+    list.innerHTML = html;
+
+    list.querySelectorAll('.period-delete').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var date = btn.dataset.date;
+        state.periods = state.periods.filter(function(p){ return p !== date; });
+        savePeriods(state.periods);
+        renderPeriodList();
+        updateAutoPhase();
+        renderAll();
+        showToast('已删除');
+      });
+    });
+  }
+
+  // ====== 表单初始化 ======
+  var dateInput = document.getElementById('dateInput');
+  var weightInput = document.getElementById('weightInput');
+  var goalInput = document.getElementById('goalInput');
+  dateInput.value = todayStr();
+  if(state.goal) goalInput.value = state.goal;
+
+  // 自动阶段显示
+  function updateAutoPhase(){
+    var date = dateInput.value;
+    var phase = getPhaseForDate(date);
+    var cycleDay = getCycleDay(date);
+    var display = document.getElementById('autoPhaseDisplay');
+
+    var hint = '';
+    if(cycleDay !== null){
+      hint = '（周期第 ' + cycleDay + ' 天）';
+    } else {
+      hint = '（该日期早于已记录的经期，默认卵泡期）';
+    }
+
+    var html = '<div class="phase-badge ' + phase + '">';
+    html += '<span class="badge-dot"></span>';
+    html += '<span>' + phaseLabel(phase) + '</span>';
+    html += '</div>';
+    html += '<div class="phase-hint">' + hint + '</div>';
+    display.innerHTML = html;
+  }
+
+  // 预填：如果当天已有记录，加载到表单
+  function prefillForm(){
+    var today = dateInput.value;
+    var existing = null;
+    for(var i=0;i<state.records.length;i++){
+      if(state.records[i].date === today){ existing = state.records[i]; break; }
+    }
+    if(existing){
+      weightInput.value = existing.weight;
+      selectSport(existing.sport || 'no');
+    } else {
+      weightInput.value = '';
+    }
+    updateAutoPhase();
+  }
+
+  function selectSport(sport){
+    state.selectedSport = sport;
+    var btns = document.querySelectorAll('#sportGroup .toggle-btn');
+    for(var i=0;i<btns.length;i++){
+      var b = btns[i];
+      b.classList.toggle('active', b.dataset.sport === sport);
+    }
+  }
+
+  document.querySelectorAll('#sportGroup .toggle-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      selectSport(btn.dataset.sport);
+    });
+  });
+  dateInput.addEventListener('change', prefillForm);
+
+  // ====== 保存记录 ======
+  document.getElementById('submitBtn').addEventListener('click', function(){
+    var date = dateInput.value;
+    var weight = parseFloat(weightInput.value);
+    if(!date){ showToast('请选择日期'); return; }
+    if(!weight || weight < 20 || weight > 500){ showToast('请输入有效体重'); return; }
+
+    // 自动推算阶段
+    var phase = getPhaseForDate(date);
+
+    var record = {
+      date: date,
+      weight: weight,
+      phase: phase,
+      sport: state.selectedSport,
+      ts: Date.now()
+    };
+
+    // 同日覆盖
+    var found = false;
+    for(var i=0;i<state.records.length;i++){
+      if(state.records[i].date === date){
+        state.records[i] = record;
+        found = true;
+        break;
+      }
+    }
+    if(!found) state.records.push(record);
+
+    saveRecords(state.records);
+    renderAll();
+    showToast(found ? '已更新记录' : '记录已保存');
+  });
+
+  // ====== 目标体重 ======
+  document.getElementById('goalSaveBtn').addEventListener('click', function(){
+    var v = parseFloat(goalInput.value);
+    if(!v || v < 20 || v > 500){ showToast('请输入有效目标'); return; }
+    state.goal = v;
+    saveGoal(v);
+    renderStats();
+    showToast('目标已设置');
+  });
+
+  // ====== 统计渲染 ======
+  function getSortedRecords(){
+    return state.records.slice().sort(function(a,b){
+      return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+    });
+  }
+
+  function renderStats(){
+    var sorted = getSortedRecords();
+    var latestEl = document.getElementById('statLatest');
+    var initialEl = document.getElementById('statInitial');
+    var lossEl = document.getElementById('statLoss');
+    var goalEl = document.getElementById('statGoal');
+
+    if(sorted.length === 0){
+      latestEl.innerHTML = '— <span class="unit">斤</span>';
+      initialEl.innerHTML = '— <span class="unit">斤</span>';
+      lossEl.innerHTML = '— <span class="unit">斤</span>';
+      goalEl.innerHTML = '— <span class="unit">斤</span>';
+      return;
+    }
+
+    var latest = sorted[sorted.length-1];
+    var initial = sorted[0];
+    var loss = (initial.weight - latest.weight);
+    var lossStr = (loss >= 0 ? '-' : '+') + Math.abs(loss).toFixed(1);
+
+    latestEl.innerHTML = latest.weight.toFixed(1) + ' <span class="unit">斤</span>';
+    initialEl.innerHTML = initial.weight.toFixed(1) + ' <span class="unit">斤</span>';
+    lossEl.innerHTML = lossStr + ' <span class="unit">斤</span>';
+    lossEl.className = 'stat-value ' + (loss > 0 ? 'green' : (loss < 0 ? 'pink' : 'gray'));
+
+    if(state.goal){
+      var diff = latest.weight - state.goal;
+      goalEl.innerHTML = diff.toFixed(1) + ' <span class="unit">斤</span>';
+      goalEl.className = 'stat-value ' + (diff > 0 ? 'pink' : 'green');
+    }else{
+      goalEl.innerHTML = '未设置 <span class="unit"></span>';
+      goalEl.className = 'stat-value gray';
+    }
+  }
+
+  // ====== 日历 ======
+  var calCurrent = new Date();
+  calCurrent.setDate(1);
+
+  function renderCalendar(){
+    var grid = document.getElementById('calendarGrid');
+    var titleEl = document.getElementById('calTitle');
+    var year = calCurrent.getFullYear();
+    var month = calCurrent.getMonth();
+    titleEl.textContent = year + '年' + (month+1) + '月';
+
+    // 构建记录查找表 + 排序的记录列表
+    var recordMap = {};
+    state.records.forEach(function(r){
+      recordMap[r.date] = r;
+    });
+    var sortedRecords = state.records.slice().sort(function(a,b){
+      return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+    });
+
+    var today = todayStr();
+    var firstDay = new Date(year, month, 1);
+    var startWeekday = firstDay.getDay(); // 0=周日
+    var daysInMonth = new Date(year, month+1, 0).getDate();
+
+    var html = '';
+    // 前置空格
+    for(var e=0;e<startWeekday;e++){
+      html += '<div class="cal-day empty"></div>';
+    }
+    for(var d=1;d<=daysInMonth;d++){
+      var mStr = String(month+1).padStart(2,'0');
+      var dStr = String(d).padStart(2,'0');
+      var dateStr = year+'-'+mStr+'-'+dStr;
+      var rec = recordMap[dateStr];
+      var phase = getPhaseForDate(dateStr);
+      var classes = 'cal-day';
+      if(rec) classes += ' has-record';
+      if(phase !== 'none') classes += ' phase-' + phase;
+      if(dateStr === today) classes += ' today';
+
+      html += '<div class="'+classes+'">';
+      html += '<span class="day-num">'+d+'</span>';
+      if(rec){
+        html += '<span class="day-weight">'+rec.weight.toFixed(1)+'</span>';
+
+        // 找上一条更早的记录
+        var prevRec = null;
+        for(var s=sortedRecords.length-1;s>=0;s--){
+          if(sortedRecords[s].date < dateStr){
+            prevRec = sortedRecords[s];
+            break;
+          }
+        }
+        if(prevRec){
+          var dDiff = rec.weight - prevRec.weight;
+          var diffCls = dDiff < 0 ? 'down' : (dDiff > 0 ? 'up' : 'flat');
+          var arrow = dDiff < 0 ? '▼' : (dDiff > 0 ? '▲' : '—');
+          html += '<span class="day-diff '+diffCls+'">'+arrow+Math.abs(dDiff).toFixed(1)+'</span>';
+        } else {
+          // 无对比记录时也占位，保持高度一致
+          html += '<span class="day-diff flat" style="visibility:hidden;">—0.0</span>';
+        }
+
+        if(rec.sport === 'yes'){
+          html += '<span class="sport-mark">❤</span>';
+        }
+      } else {
+        // 未添加体重的格子预留占位，保持日期数字高度与有记录时一致
+        html += '<span class="day-weight" style="visibility:hidden;">0.0</span>';
+        html += '<span class="day-diff flat" style="visibility:hidden;">—0.0</span>';
+      }
+      html += '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  // 日历切换
+  document.getElementById('calPrevBtn').addEventListener('click', function(){
+    calCurrent.setMonth(calCurrent.getMonth()-1);
+    renderCalendar();
+  });
+  document.getElementById('calNextBtn').addEventListener('click', function(){
+    calCurrent.setMonth(calCurrent.getMonth()+1);
+    renderCalendar();
+  });
+
+  // ====== 历史列表 ======
+  function renderHistory(){
+    var list = document.getElementById('historyList');
+    var countEl = document.getElementById('historyCount');
+    var sorted = state.records.slice().sort(function(a,b){
+      return a.date > b.date ? -1 : (a.date < b.date ? 1 : b.ts - a.ts);
+    });
+    countEl.textContent = '共 ' + sorted.length + ' 条记录';
+
+    if(sorted.length === 0){
+      list.innerHTML = '<div class="empty-state">还没有记录，开始录入第一条吧</div>';
+      return;
+    }
+
+    var html = '';
+    for(var i=0;i<sorted.length;i++){
+      var r = sorted[i];
+      // 重新推算phase
+      var phase = getPhaseForDate(r.date);
+      var prev = (i < sorted.length-1) ? sorted[i+1] : null;
+      var diff = prev ? (r.weight - prev.weight) : 0;
+      var diffStr = '';
+      var diffCls = 'flat';
+      if(prev){
+        if(diff < 0){ diffStr = '↓ ' + Math.abs(diff).toFixed(1); diffCls = 'down'; }
+        else if(diff > 0){ diffStr = '↑ ' + diff.toFixed(1); diffCls = 'up'; }
+        else { diffStr = '— 0.0'; diffCls = 'flat'; }
+      }
+
+      var metaHtml = '';
+      if(phase && phase !== 'none'){
+        var cls = 'tag-' + phase;
+        metaHtml += '<span class="tag '+cls+'">'+phaseLabel(phase)+'</span>';
+      }
+      if(r.sport === 'yes'){
+        metaHtml += '<span class="tag tag-sport">运动</span>';
+      }
+
+      html += '<div class="history-item">';
+      html += '<div class="history-left">';
+      html += '<div class="history-date">'+r.date+'</div>';
+      html += '<div class="history-meta">'+metaHtml+'</div>';
+      html += '</div>';
+      html += '<div class="history-weight">';
+      html += '<div class="num">'+r.weight.toFixed(1)+'<span class="unit"> 斤</span></div>';
+      if(prev) html += '<div class="history-diff '+diffCls+'">'+diffStr+'</div>';
+      html += '</div>';
+      html += '<button class="delete-btn" data-date="'+r.date+'">×</button>';
+      html += '</div>';
+    }
+    list.innerHTML = html;
+
+    list.querySelectorAll('.delete-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var date = btn.dataset.date;
+        if(confirm('确定删除 '+date+' 的记录吗？')){
+          state.records = state.records.filter(function(r){ return r.date !== date; });
+          saveRecords(state.records);
+          renderAll();
+          showToast('已删除');
+        }
+      });
+    });
+  }
+
+  // ====== 导出CSV ======
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    if(state.records.length === 0){
+      showToast('暂无数据可导出');
+      return;
+    }
+    var sorted = state.records.slice().sort(function(a,b){
+      return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+    });
+    var csv = '\uFEFF日期,体重(斤),周期阶段,是否运动\n';
+    sorted.forEach(function(r){
+      var phase = getPhaseForDate(r.date);
+      var phaseText = phaseLabel(phase);
+      if(phase === 'none') phaseText = '卵泡期';
+      var sport = r.sport === 'yes' ? '是' : '否';
+      csv += r.date + ',' + r.weight.toFixed(1) + ',' + phaseText + ',' + sport + '\n';
+    });
+
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '体重记录_'+todayStr()+'.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('已导出 '+sorted.length+' 条记录');
+  });
+
+  // ====== 统一渲染 ======
+  function renderAll(){
+    renderStats();
+    renderCalendar();
+    renderHistory();
+  }
+
+  // ====== 初始化 ======
+  renderPeriodList();
+  prefillForm();
+  renderAll();
+
+  // 窗口大小变化时重绘日历
+  var resizeTimer;
+  window.addEventListener('resize', function(){
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderCalendar, 200);
+  });
+
+})();
+</script>
+</body>
+</html>
