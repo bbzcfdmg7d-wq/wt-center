@@ -625,6 +625,69 @@
     cursor:pointer;
     font-family:inherit;
   }
+  /* 体围表格 */
+  .measure-table-wrap{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .measure-table{
+    width:100%;
+    min-width:640px;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  .measure-table thead th{
+    background:var(--bg);
+    color:var(--text);
+    font-weight:600;
+    font-size:13px;
+    padding:12px 10px;
+    text-align:center;
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+    position:sticky;
+    top:0;
+    z-index:2;
+  }
+  .measure-table thead th.sticky-col{
+    left:0;
+    z-index:3;
+    background:var(--bg);
+  }
+  .measure-table thead th .th-unit{
+    font-size:10px;
+    color:var(--text-light);
+    font-weight:400;
+  }
+  .measure-table tbody td{
+    padding:12px 10px;
+    text-align:center;
+    border-bottom:1px solid var(--border);
+    color:var(--text);
+    font-variant-numeric:tabular-nums;
+  }
+  .measure-table tbody td.sticky-col{
+    position:sticky;
+    left:0;
+    background:var(--card);
+    font-weight:600;
+    color:var(--text);
+    z-index:1;
+    text-align:left;
+    box-shadow:1px 0 0 var(--border);
+  }
+  .measure-table tbody tr:last-child td{
+    border-bottom:none;
+  }
+  .measure-table tbody tr:active td{
+    background:var(--accent-light);
+  }
+  .measure-table .empty-cell{
+    color:var(--text-dim);
+  }
   /* 底部导航栏 */
   .tab-bar{
     position:fixed;
@@ -816,6 +879,32 @@
       <div class="history-list" id="historyList"></div>
     </div>
   </div>
+
+  <!-- 页面5：体围表格 -->
+  <div class="page" id="page-measure">
+    <div class="section">
+      <div class="section-title"><span class="dot"></span> 体围数据（cm）</div>
+      <div class="phase-hint" style="margin-bottom:10px;">左右滑动查看更多列；缺失项显示 —</div>
+      <div class="measure-table-wrap">
+        <table class="measure-table" id="measureTable">
+          <thead>
+            <tr>
+              <th class="sticky-col">日期</th>
+              <th>体重<br><span class="th-unit">(斤)</span></th>
+              <th>胸围</th>
+              <th>腰围</th>
+              <th>腹围</th>
+              <th>臀围</th>
+              <th>上臂围</th>
+              <th>大腿围</th>
+              <th>小腿围</th>
+            </tr>
+          </thead>
+          <tbody id="measureTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 底部导航栏 -->
@@ -827,6 +916,10 @@
   <button class="tab-item" data-page="calendar">
     <span class="tab-icon">▦</span>
     <span class="tab-label">日历</span>
+  </button>
+  <button class="tab-item" data-page="measure">
+    <span class="tab-icon">⊞</span>
+    <span class="tab-label">体围</span>
   </button>
   <button class="tab-item" data-page="period">
     <span class="tab-icon">♥</span>
@@ -1032,6 +1125,7 @@
   var pageTitles = {
     record: {title:'录入体重', subtitle:'记录每一天的变化'},
     calendar: {title:'数据概览', subtitle:'日历与统计'},
+    measure: {title:'体围数据', subtitle:'所有维度的历史记录'},
     period: {title:'经期管理', subtitle:'追踪生理周期'},
     history: {title:'历史记录', subtitle:'全部体重记录'}
   };
@@ -1052,6 +1146,7 @@
     }
     if(pageName === 'calendar') renderCalendar();
     if(pageName === 'history') renderHistory();
+    if(pageName === 'measure') renderMeasureTable();
     window.scrollTo(0, 0);
   }
 
@@ -1530,11 +1625,51 @@
     showToast('已导出 '+sorted.length+' 条记录');
   });
 
+  // ====== 体围表格 ======
+  function renderMeasureTable(){
+    var tbody = document.getElementById('measureTableBody');
+    var sorted = state.records.slice().sort(function(a,b){
+      return a.date > b.date ? -1 : (a.date < b.date ? 1 : b.ts - a.ts);
+    });
+
+    if(sorted.length === 0){
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-cell" style="padding:40px 20px;">还没有体围数据，开始录入第一条吧</td></tr>';
+      return;
+    }
+
+    var html = '';
+    for(var i=0;i<sorted.length;i++){
+      var r = sorted[i];
+      var m = r.measures || {};
+      var parts = r.date.split('-');
+      var dateLabel = parts[1] + '/' + parts[2];
+      // 如果不是今年，加年份
+      var thisYear = new Date().getFullYear();
+      if(parseInt(parts[0],10) !== thisYear){
+        dateLabel = parts[0] + '/' + dateLabel;
+      }
+
+      html += '<tr>';
+      html += '<td class="sticky-col">'+dateLabel+'</td>';
+      html += '<td><b>'+r.weight.toFixed(1)+'</b></td>';
+      html += '<td'+(m.chest?'':' class="empty-cell"')+'>'+(m.chest ? m.chest.toFixed(1) : '—')+'</td>';
+      html += '<td'+(m.waist?'':' class="empty-cell"')+'>'+(m.waist ? m.waist.toFixed(1) : '—')+'</td>';
+      html += '<td'+(m.abdomen?'':' class="empty-cell"')+'>'+(m.abdomen ? m.abdomen.toFixed(1) : '—')+'</td>';
+      html += '<td'+(m.hip?'':' class="empty-cell"')+'>'+(m.hip ? m.hip.toFixed(1) : '—')+'</td>';
+      html += '<td'+(m.arm?'':' class="empty-cell"')+'>'+(m.arm ? m.arm.toFixed(1) : '—')+'</td>';
+      html += '<td'+(m.thigh?'':' class="empty-cell"')+'>'+(m.thigh ? m.thigh.toFixed(1) : '—')+'</td>';
+      html += '<td'+(m.calf?'':' class="empty-cell"')+'>'+(m.calf ? m.calf.toFixed(1) : '—')+'</td>';
+      html += '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
   // ====== 统一渲染 ======
   function renderAll(){
     renderStats();
     renderCalendar();
     renderHistory();
+    renderMeasureTable();
   }
 
   // ====== 初始化 ======
