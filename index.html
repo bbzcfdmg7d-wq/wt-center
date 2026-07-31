@@ -759,6 +759,17 @@
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">当前生理周期阶段（自动识别）</label>
+          <div id="autoPhaseDisplay"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">是否运动</label>
+          <div class="toggle-group" id="sportGroup">
+            <button class="toggle-btn active" data-sport="no">未运动</button>
+            <button class="toggle-btn" data-sport="yes">已运动</button>
+          </div>
+        </div>
+        <div class="form-group">
           <label class="form-label">体围数据（cm，可选填）</label>
           <div class="measure-grid-3">
             <div class="measure-item">
@@ -789,17 +800,6 @@
               <div class="mi-label">小腿围</div>
               <input type="number" id="m_calf" class="mi-input" placeholder="—" step="0.1" min="0" max="100">
             </div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">当前生理周期阶段（自动识别）</label>
-          <div id="autoPhaseDisplay"></div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">是否运动</label>
-          <div class="toggle-group" id="sportGroup">
-            <button class="toggle-btn active" data-sport="no">未运动</button>
-            <button class="toggle-btn" data-sport="yes">已运动</button>
           </div>
         </div>
         <button class="submit-btn" id="submitBtn">保存记录</button>
