@@ -387,11 +387,11 @@
   .cal-day .day-diff.flat{background:var(--border);color:var(--text-light);}
   .cal-day .sport-mark{
     position:absolute;
-    bottom:2px;left:50%;
+    bottom:3px;left:50%;
     transform:translateX(-50%);
-    font-size:11px;
-    line-height:1;
-    color:#e0a738;
+    width:5px;height:5px;
+    border-radius:50%;
+    background:#e88aa0;
   }
   .cal-day.empty{
     background:transparent;
@@ -407,7 +407,7 @@
   }
   .legend-item{display:flex;align-items:center;gap:4px;}
   .legend-dot{width:8px;height:8px;border-radius:50%;}
-  .legend-star{color:#e0a738;font-size:13px;line-height:1;font-weight:700;}
+  .legend-pink-dot{width:8px;height:8px;border-radius:50%;background:#e88aa0;}
   /* History */
   .toolbar{
     display:flex;
@@ -676,7 +676,7 @@
           <div class="legend-item"><span class="legend-dot" style="background:var(--pink)"></span> 经期</div>
           <div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span> 排卵期</div>
           <div class="legend-item"><span class="legend-dot" style="background:var(--yellow)"></span> 黄体期</div>
-          <div class="legend-item"><span class="legend-star">★</span> 运动日</div>
+          <div class="legend-item"><span class="legend-pink-dot"></span> 运动日</div>
         </div>
       </div>
       <div class="goal-row">
@@ -1204,7 +1204,7 @@
         }
 
         if(rec.sport === 'yes'){
-          html += '<span class="sport-mark">★</span>';
+          html += '<span class="sport-mark"></span>';
         }
       } else {
         html += '<span class="day-weight" style="visibility:hidden;">0.0</span>';
@@ -1258,7 +1258,7 @@
         metaHtml += '<span class="tag '+cls+'">'+phaseLabel(phase)+'</span>';
       }
       if(r.sport === 'yes'){
-        metaHtml += '<span class="tag tag-sport">★ 运动</span>';
+        metaHtml += '<span class="tag tag-sport">● 运动</span>';
       }
 
       html += '<div class="history-item">';
