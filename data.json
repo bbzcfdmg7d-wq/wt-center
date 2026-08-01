@@ -5,10 +5,94 @@
       "weight": 144.8,
       "phase": "none",
       "sport": "no",
-      "ts": 1785553448418
+      "ts": 1785555286980
+    },
+    {
+      "date": "2026-03-17",
+      "weight": 143.6,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555295572
+    },
+    {
+      "date": "2026-03-19",
+      "weight": 143.1,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555304815
+    },
+    {
+      "date": "2026-03-20",
+      "weight": 142.8,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555313063
+    },
+    {
+      "date": "2026-03-26",
+      "weight": 142.6,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555322432
+    },
+    {
+      "date": "2026-03-27",
+      "weight": 142.4,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555330586
+    },
+    {
+      "date": "2026-03-28",
+      "weight": 141.6,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555342735
+    },
+    {
+      "date": "2026-04-10",
+      "weight": 141,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555361864
+    },
+    {
+      "date": "2026-04-11",
+      "weight": 140.9,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555371740
+    },
+    {
+      "date": "2026-04-15",
+      "weight": 140.2,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555380274
+    },
+    {
+      "date": "2026-04-16",
+      "weight": 140,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555386912
+    },
+    {
+      "date": "2026-04-17",
+      "weight": 139.9,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555396894
+    },
+    {
+      "date": "2026-04-25",
+      "weight": 139,
+      "phase": "none",
+      "sport": "no",
+      "ts": 1785555404142
     }
   ],
   "goal": null,
   "periods": [],
-  "updatedAt": "2026-08-01T03:34:22.027Z"
+  "updatedAt": "2026-08-01T03:36:55.408Z"
 }
