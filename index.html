@@ -1043,7 +1043,6 @@
           </div>
         </div>
         <div class="period-list" id="periodList"></div>
-        <div class="phase-hint" style="margin-top:10px;">填写经期开始日期后，系统按30天周期推算：下次月经=末次+30天，排卵日=下次月经前14天（蓝圈标记），排卵期=排卵日±5~1天，黄体期=预测经期的前7天</div>
       </div>
     </div>
   </div>
@@ -1492,7 +1491,7 @@
   function renderPeriodList(){
     var list = document.getElementById('periodList');
     if(state.periods.length === 0){
-      list.innerHTML = '<div class="period-empty">尚未添加经期日期</div>';
+      list.innerHTML = '';
       return;
     }
     var sorted = state.periods.slice().sort();
@@ -1502,21 +1501,12 @@
       var diff = daysBetween(d, todayStr());
       var cycleInfo = diff === 0 ? '今天' : (diff > 0 ? diff + '天后' : Math.abs(diff) + '天前');
 
-      var nextPeriod = getNextPeriodDate(d);
-      var ovulationDay = getOvulationDate(d);
-      var nextDiff = daysBetween(nextPeriod, todayStr());
-      var nextInfo = nextDiff === 0 ? '今天' : (nextDiff > 0 ? nextDiff + '天后' : Math.abs(nextDiff) + '天前');
-
       html += '<div class="period-item">';
       html += '<div class="period-item-info">';
       html += '<span>'+d+'</span>';
       html += '<span class="cycle-info">'+cycleInfo+'</span>';
       html += '</div>';
       html += '<button class="period-delete" data-date="'+d+'">×</button>';
-      html += '</div>';
-      html += '<div class="period-predict">';
-      html += '<span>下次月经预估：<b>'+nextPeriod+'</b>（'+nextInfo+'）</span>';
-      html += '<span>排卵日：<b>'+ovulationDay+'</b></span>';
       html += '</div>';
     }
     list.innerHTML = html;
