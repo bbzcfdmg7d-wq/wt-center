@@ -1001,7 +1001,6 @@
           <thead>
             <tr>
               <th class="sticky-col">日期</th>
-              <th>体重</th>
               <th>胸围</th>
               <th>腰围</th>
               <th>腹围</th>
@@ -1874,12 +1873,16 @@
   // ====== 体围表格 ======
   function renderMeasureTable(){
     var tbody = document.getElementById('measureTableBody');
-    var sorted = state.records.slice().sort(function(a,b){
+    // 只保留有体围记录的日期
+    var withMeasures = state.records.filter(function(r){
+      return r.measures && Object.keys(r.measures).length > 0;
+    });
+    var sorted = withMeasures.slice().sort(function(a,b){
       return a.date > b.date ? -1 : (a.date < b.date ? 1 : b.ts - a.ts);
     });
 
     if(sorted.length === 0){
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-cell" style="padding:40px 20px;">还没有体围数据，开始录入第一条吧</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-cell" style="padding:40px 20px;">还没有体围数据，开始录入第一条吧</td></tr>';
       return;
     }
 
@@ -1889,7 +1892,6 @@
       var m = r.measures || {};
       var parts = r.date.split('-');
       var dateLabel = parts[1] + '/' + parts[2];
-      // 如果不是今年，加年份
       var thisYear = new Date().getFullYear();
       if(parseInt(parts[0],10) !== thisYear){
         dateLabel = parts[0] + '/' + dateLabel;
@@ -1897,7 +1899,6 @@
 
       html += '<tr>';
       html += '<td class="sticky-col">'+dateLabel+'</td>';
-      html += '<td><b>'+r.weight.toFixed(1)+'</b></td>';
       html += '<td'+(m.chest?'':' class="empty-cell"')+'>'+(m.chest ? m.chest.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.waist?'':' class="empty-cell"')+'>'+(m.waist ? m.waist.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.abdomen?'':' class="empty-cell"')+'>'+(m.abdomen ? m.abdomen.toFixed(1) : '—')+'</td>';
