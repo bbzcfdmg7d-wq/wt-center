@@ -306,13 +306,14 @@
     text-align:center;
   }
   .period-input-row{
-    display:flex;
+    display:grid;
+    grid-template-columns:1fr auto;
     gap:8px;
     align-items:stretch;
   }
   .period-date-input{
-    flex:1;
-    min-width:0;
+    width:100%;
+    max-width:100%;
     border:1.5px solid var(--border);
     border-radius:12px;
     padding:10px 8px;
@@ -322,6 +323,11 @@
     background:var(--bg);
     transition:border-color 0.2s;
     font-family:inherit;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .period-date-input::-webkit-date-and-time-value{
+    text-align:center;
   }
   .period-date-input:focus{
     outline:none;
@@ -332,15 +338,16 @@
     border:none;
     background:var(--pink-text);
     color:#fff;
-    padding:0 16px;
+    padding:0 18px;
     border-radius:12px;
     font-size:14px;
     font-weight:600;
     cursor:pointer;
     white-space:nowrap;
     font-family:inherit;
-    flex-shrink:0;
     box-shadow:0 2px 8px rgba(212,134,154,0.3);
+    -webkit-appearance:none;
+    appearance:none;
   }
   .period-add-btn:active{opacity:0.85;}
   .period-list{
