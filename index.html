@@ -300,13 +300,30 @@
     align-items:flex-end;
   }
   .period-input-row .form-group{flex:1;margin-bottom:0;min-width:0;}
+  .period-date-input{
+    width:100%;
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:15px;
+    color:var(--text);
+    text-align:center;
+    background:var(--bg);
+    transition:border-color 0.2s;
+    font-family:inherit;
+  }
+  .period-date-input:focus{
+    outline:none;
+    border-color:var(--pink-text);
+    background:#fff;
+  }
   .period-add-btn{
     border:none;
     background:var(--pink-text);
     color:#fff;
-    padding:14px 24px;
-    border-radius:14px;
-    font-size:15px;
+    padding:12px 20px;
+    border-radius:12px;
+    font-size:14px;
     font-weight:600;
     cursor:pointer;
     white-space:nowrap;
@@ -771,7 +788,7 @@
     font-weight:600;
     color:var(--text);
     z-index:1;
-    text-align:left;
+    text-align:center;
     box-shadow:1px 0 0 var(--border);
   }
   .measure-table tbody tr:last-child td{
@@ -969,11 +986,13 @@
     <div class="section">
       <div class="section-title"><span class="dot" style="background:var(--pink)"></span> 经期日期管理</div>
       <div class="period-card">
-        <div class="form-group">
-          <label class="form-label">经期开始日期</label>
-          <input type="date" id="periodDateInput" class="form-input">
+        <div class="period-input-row">
+          <div class="form-group">
+            <label class="form-label">经期开始日期</label>
+            <input type="date" id="periodDateInput" class="period-date-input">
+          </div>
+          <button class="period-add-btn" id="periodAddBtn">添加</button>
         </div>
-        <button class="period-add-btn" id="periodAddBtn" style="width:100%;margin-bottom:0;">添加经期日期</button>
         <div class="period-list" id="periodList"></div>
         <div class="phase-hint" style="margin-top:10px;">填写经期开始日期后，系统按30天周期推算：下次月经=末次+30天，排卵日=下次月经前14天，排卵期=排卵日±5~1天，黄体期=排卵期后至下次月经前</div>
       </div>
