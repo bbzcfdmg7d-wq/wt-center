@@ -1494,17 +1494,15 @@
       list.innerHTML = '';
       return;
     }
-    var sorted = state.periods.slice().sort();
+    // 倒序排列：最新添加的在最上面
+    var sorted = state.periods.slice().sort().reverse();
     var html = '';
     for(var i=0;i<sorted.length;i++){
       var d = sorted[i];
-      var diff = daysBetween(d, todayStr());
-      var cycleInfo = diff === 0 ? '今天' : (diff > 0 ? diff + '天后' : Math.abs(diff) + '天前');
 
       html += '<div class="period-item">';
       html += '<div class="period-item-info">';
       html += '<span>'+d+'</span>';
-      html += '<span class="cycle-info">'+cycleInfo+'</span>';
       html += '</div>';
       html += '<button class="period-delete" data-date="'+d+'">×</button>';
       html += '</div>';
