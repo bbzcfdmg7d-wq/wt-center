@@ -1107,6 +1107,28 @@
   var syncTimer = null;
   var suppressPush = false; // 拉取时抑制推送
 
+  // 合并记录：按日期去重，相同日期取 ts 更大的（更新的）
+  function mergeRecords(local, cloud){
+    var map = {};
+    local.forEach(function(r){ map[r.date] = r; });
+    cloud.forEach(function(r){
+      if(!map[r.date] || (r.ts || 0) > (map[r.date].ts || 0)){
+        map[r.date] = r;
+      }
+    });
+    return Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){
+      return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+    });
+  }
+
+  // 合并经期日期：取并集
+  function mergePeriods(local, cloud){
+    var set = {};
+    local.forEach(function(d){ set[d] = true; });
+    cloud.forEach(function(d){ set[d] = true; });
+    return Object.keys(set).sort();
+  }
+
   // 收集所有数据为一个对象
   function collectAllData(){
     return {
@@ -1181,13 +1203,27 @@
       var raw = decodeURIComponent(escape(atob(d.content.replace(/\n/g, ''))));
       var data = JSON.parse(raw);
       suppressPush = true;
-      if(data.records) saveRecords(data.records);
-      if(data.goal !== undefined) saveGoal(data.goal);
-      if(data.periods) savePeriods(data.periods);
+      // 合并本地和云端数据（取并集，按日期去重，本地新数据优先）
+      var localRecords = loadRecords();
+      var cloudRecords = data.records || [];
+      var merged = mergeRecords(localRecords, cloudRecords);
+      var localPeriods = loadPeriods();
+      var cloudPeriods = data.periods || [];
+      var mergedPeriods = mergePeriods(localPeriods, cloudPeriods);
+      var mergedGoal = data.goal;
+      // 本地 goal 优先（如果有）
+      var localGoal = loadGoal();
+      if(localGoal !== null) mergedGoal = localGoal;
+      
+      saveRecords(merged);
+      saveGoal(mergedGoal);
+      savePeriods(mergedPeriods);
       suppressPush = false;
-      console.log('✅ 已从云端恢复数据');
-      if(statusEl){ statusEl.textContent = '✅ 数据已从云端恢复'; statusEl.className = 'sync-status success'; }
+      console.log('✅ 已合并云端数据');
+      if(statusEl){ statusEl.textContent = '✅ 数据已同步'; statusEl.className = 'sync-status success'; }
       if(callback) callback(true);
+      // 合并后推回云端
+      setTimeout(pushToGitHub, 500);
     }).catch(function(e){
       console.log('云端无数据或拉取失败:', e);
       if(statusEl){ statusEl.textContent = '☁️ 云端暂无数据，将自动同步'; statusEl.className = 'sync-status'; }
