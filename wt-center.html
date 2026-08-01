@@ -477,14 +477,15 @@
     min-height:0;
   }
   .cal-day.has-record{
-    background:#fff;
+    background:#fff !important;
+    border:1px solid var(--border);
   }
   .cal-day.phase-period{background:var(--pink-bg);}
   .cal-day.phase-ovulation{background:var(--blue-bg);}
   .cal-day.phase-luteal{background:var(--yellow-bg);}
-  .cal-day.has-record.phase-period{background:var(--pink-bg);}
-  .cal-day.has-record.phase-ovulation{background:var(--blue-bg);}
-  .cal-day.has-record.phase-luteal{background:var(--yellow-bg);}
+  .cal-day.has-record.phase-period{background:#fff !important;border-top:3px solid var(--pink);}
+  .cal-day.has-record.phase-ovulation{background:#fff !important;border-top:3px solid var(--blue);}
+  .cal-day.has-record.phase-luteal{background:#fff !important;border-top:3px solid var(--yellow);}
   /* 预测经期：虚线粉色边框 */
   .cal-day.predicted-period{
     background:transparent !important;
@@ -492,8 +493,11 @@
     box-sizing:border-box;
   }
   .cal-day.today{
-    border:1.5px solid var(--accent);
+    border:2px solid var(--accent);
     box-sizing:border-box;
+  }
+  .cal-day.has-record.today{
+    border:2px solid var(--accent);
   }
   /* 预测经期的日期数字颜色（粉色） */
   .cal-day.predicted-period .day-num{
