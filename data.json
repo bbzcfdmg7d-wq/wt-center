@@ -146,11 +146,18 @@
       "phase": "none",
       "sport": "no",
       "ts": 1785561666664
+    },
+    {
+      "date": "2026-07-31",
+      "weight": 135.3,
+      "phase": "luteal",
+      "sport": "no",
+      "ts": 1785561856615
     }
   ],
-  "goal": null,
+  "goal": 114,
   "periods": [
     "2026-07-03"
   ],
-  "updatedAt": "2026-08-01T05:21:42.023Z"
+  "updatedAt": "2026-08-01T05:24:50.525Z"
 }
