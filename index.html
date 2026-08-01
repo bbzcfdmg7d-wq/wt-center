@@ -580,6 +580,19 @@
     border-radius:50%;
     background:#e88aa0;
   }
+  /* 排卵日标记：底部居中浅蓝色空心圆圈 */
+  .cal-day .ovulation-mark{
+    position:absolute;
+    bottom:3px;
+    left:50%;
+    transform:translateX(-50%);
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    border:1.5px solid var(--blue-text);
+    background:transparent;
+    box-sizing:border-box;
+  }
   .cal-day.empty{
     background:transparent;
   }
@@ -595,6 +608,12 @@
   .legend-item{display:flex;align-items:center;gap:4px;}
   .legend-dot{width:8px;height:8px;border-radius:50%;}
   .legend-pink-dot{width:8px;height:8px;border-radius:50%;background:#e88aa0;}
+  .legend-ovulation-circle{
+    width:9px;height:9px;border-radius:50%;
+    border:1.5px solid var(--blue-text);
+    background:transparent;
+    box-sizing:border-box;
+  }
   .legend-dashed-box{
     width:12px;height:12px;border-radius:3px;
     border:1.5px dashed var(--pink-dash);
@@ -993,6 +1012,7 @@
         <div class="chart-legend">
           <div class="legend-item"><span class="legend-dot" style="background:var(--pink)"></span> 经期</div>
           <div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span> 排卵期</div>
+          <div class="legend-item"><span class="legend-ovulation-circle"></span> 排卵日</div>
           <div class="legend-item"><span class="legend-dot" style="background:var(--yellow)"></span> 黄体期</div>
           <div class="legend-item"><span class="legend-pink-dot"></span> 运动日</div>
           <div class="legend-item"><span class="legend-dashed-box"></span> 预测经期</div>
@@ -1020,7 +1040,7 @@
           </div>
         </div>
         <div class="period-list" id="periodList"></div>
-        <div class="phase-hint" style="margin-top:10px;">填写经期开始日期后，系统按30天周期推算：下次月经=末次+30天，排卵日=下次月经前14天，排卵期=排卵日±5~1天，黄体期=排卵期后至下次月经前</div>
+        <div class="phase-hint" style="margin-top:10px;">填写经期开始日期后，系统按30天周期推算：下次月经=末次+30天，排卵日=下次月经前14天（蓝圈标记），排卵期=排卵日±5~1天，黄体期=预测经期的前7天</div>
       </div>
     </div>
   </div>
@@ -1353,9 +1373,11 @@
     var ovulationDay = getOvulationDate(lastPeriodDate);
     var ovulationStart = addDays(ovulationDay, -5);
     var ovulationEnd = addDays(ovulationDay, 1);
-    var lutealStart = addDays(ovulationEnd, 1);
+    // 黄体期改为：预测经期的前7天
+    var lutealStart = addDays(nextPeriod, -7);
     var lutealEnd = addDays(nextPeriod, -1);
 
+    if(dateStr === ovulationDay) return 'ovulation';
     if(dateStr >= ovulationStart && dateStr <= ovulationEnd) return 'ovulation';
     if(dateStr >= lutealStart && dateStr <= lutealEnd) return 'luteal';
     return 'none';
@@ -1714,6 +1736,13 @@
     // 预测经期（仅一个月）
     var predicted = getPredictedPeriodDates(year, month);
 
+    // 排卵日集合（所有经期记录推算出的排卵日）
+    var ovulationDays = {};
+    state.periods.forEach(function(p){
+      var ovDay = getOvulationDate(p);
+      ovulationDays[ovDay] = true;
+    });
+
     var today = todayStr();
     var firstDay = new Date(year, month, 1);
     var startWeekday = firstDay.getDay();
@@ -1729,6 +1758,7 @@
       var dateStr = year+'-'+mStr+'-'+dStr;
       var rec = recordMap[dateStr];
       var phase = getPhaseForDate(dateStr);
+      var isOvulationDay = ovulationDays[dateStr];
       var classes = 'cal-day';
       if(rec) classes += ' has-record';
       if(phase !== 'none') classes += ' phase-' + phase;
@@ -1763,6 +1793,9 @@
         } else {
           html += '<div class="row-bot flat" style="opacity:0;">—0.0</div>';
         }
+        if(isOvulationDay){
+          html += '<span class="ovulation-mark"></span>';
+        }
       } else {
         // 预测经期格子（只保留粉色虚线框，不显示"预测"文字）
         if(predicted[dateStr]){
@@ -1778,6 +1811,9 @@
           html += '</div>';
           html += '<div class="row-mid" style="visibility:hidden;">0.0</div>';
           html += '<div class="row-bot flat" style="visibility:hidden;">—0.0</div>';
+        }
+        if(isOvulationDay){
+          html += '<span class="ovulation-mark"></span>';
         }
       }
       html += '</div>';
