@@ -12,7 +12,16 @@
       "weight": 143.6,
       "phase": "none",
       "sport": "no",
-      "ts": 1785555295572
+      "ts": 1785562025342,
+      "measures": {
+        "chest": 104.5,
+        "waist": 86,
+        "abdomen": 96,
+        "hip": 106,
+        "arm": 33,
+        "thigh": 62.5,
+        "calf": 38
+      }
     },
     {
       "date": "2026-03-19",
@@ -138,7 +147,16 @@
       "weight": 136,
       "phase": "none",
       "sport": "no",
-      "ts": 1785561658498
+      "ts": 1785562081956,
+      "measures": {
+        "chest": 101,
+        "waist": 80,
+        "abdomen": 90,
+        "hip": 101.5,
+        "arm": 32,
+        "thigh": 60,
+        "calf": 38
+      }
     },
     {
       "date": "2026-06-16",
@@ -159,5 +177,5 @@
   "periods": [
     "2026-07-03"
   ],
-  "updatedAt": "2026-08-01T05:24:50.525Z"
+  "updatedAt": "2026-08-01T05:28:12.208Z"
 }
