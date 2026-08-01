@@ -919,13 +919,13 @@
   <!-- 页面1：录入 -->
   <div class="page active" id="page-record">
     <div class="section">
-      <div class="section-title"><span class="dot"></span> 录入体重</div>
+      <div class="section-title"><span class="dot"></span> 录入数据</div>
       <div class="card">
         <div class="form-group">
-          <label class="form-label">日期 / 体重</label>
+          <label class="form-label">日期 / 体重（选填）</label>
           <div class="toggle-group" style="gap:8px;">
             <input type="date" id="dateInput" class="form-input" style="flex:1;min-width:0;">
-            <input type="number" id="weightInput" class="form-input" placeholder="120斤" step="0.1" min="20" max="500" style="flex:1;min-width:0;">
+            <input type="number" id="weightInput" class="form-input" placeholder="体重（选填）" step="0.1" min="20" max="500" style="flex:1;min-width:0;">
           </div>
         </div>
         <div class="form-group">
@@ -1438,7 +1438,7 @@
 
   // ====== 页面切换 ======
   var pageTitles = {
-    record: {title:'录入体重', subtitle:'记录每一天的变化'},
+    record: {title:'录入数据', subtitle:'记录每一天的变化'},
     calendar: {title:'数据概览', subtitle:'日历与统计'},
     measure: {title:'体围数据', subtitle:'所有维度的历史记录'},
     period: {title:'经期管理', subtitle:'追踪生理周期'},
@@ -1575,7 +1575,7 @@
       if(state.records[i].date === today){ existing = state.records[i]; break; }
     }
     if(existing){
-      weightInput.value = existing.weight || '';
+      weightInput.value = (typeof existing.weight === 'number') ? existing.weight : '';
       selectSport(existing.sport || 'no');
       MEASURE_FIELDS.forEach(function(f){
         measureInputs[f].value = (existing.measures && existing.measures[f]) || '';
@@ -1607,7 +1607,8 @@
     var date = dateInput.value;
     var weight = parseFloat(weightInput.value);
     if(!date){ showToast('请选择日期'); return; }
-    if(!weight || weight < 20 || weight > 500){ showToast('请输入有效体重'); return; }
+    // 体重改为选填：只要体重有效就保存，没有体重也允许（至少要有运动或体围）
+    var hasWeight = !isNaN(weight) && weight >= 20 && weight <= 500;
 
     // 收集体围数据
     var measures = {};
@@ -1620,14 +1621,20 @@
       }
     });
 
+    // 至少要有体重、体围、运动中的一项
+    if(!hasWeight && !hasMeasure && state.selectedSport !== 'yes'){
+      showToast('请至少填写体重、体围或运动');
+      return;
+    }
+
     var phase = getPhaseForDate(date);
     var record = {
       date: date,
-      weight: weight,
       phase: phase,
       sport: state.selectedSport,
       ts: Date.now()
     };
+    if(hasWeight) record.weight = weight;
     if(hasMeasure) record.measures = measures;
 
     var found = false;
@@ -1670,7 +1677,10 @@
     var goalEl = document.getElementById('statGoal');
     var bmiEl = document.getElementById('statBMI');
 
-    if(sorted.length === 0){
+    // 只取有体重的记录用于统计
+    var weightRecords = sorted.filter(function(r){ return typeof r.weight === 'number' && !isNaN(r.weight); });
+
+    if(weightRecords.length === 0){
       latestEl.innerHTML = '— <span class="unit">斤</span>';
       initialEl.innerHTML = '— <span class="unit">斤</span>';
       lossEl.innerHTML = '— <span class="unit">斤</span>';
@@ -1679,8 +1689,8 @@
       return;
     }
 
-    var latest = sorted[sorted.length-1];
-    var initial = sorted[0];
+    var latest = weightRecords[weightRecords.length-1];
+    var initial = weightRecords[0];
     var loss = (initial.weight - latest.weight);
     var lossStr = (loss >= 0 ? '-' : '+') + Math.abs(loss).toFixed(1);
 
@@ -1775,23 +1785,29 @@
           html += '<span class="sport-mark"></span>';
         }
         html += '</div>';
-        // 第二行：体重
-        html += '<div class="row-mid">'+rec.weight.toFixed(1)+' 斤</div>';
-        // 第三行：变化值
-        var prevRec = null;
-        for(var s=sortedRecords.length-1;s>=0;s--){
-          if(sortedRecords[s].date < dateStr){
-            prevRec = sortedRecords[s];
-            break;
+        // 第二行：体重（可选）
+        if(typeof rec.weight === 'number' && !isNaN(rec.weight)){
+          html += '<div class="row-mid">'+rec.weight.toFixed(1)+' 斤</div>';
+          // 第三行：变化值
+          var prevRec = null;
+          for(var s=sortedRecords.length-1;s>=0;s--){
+            if(sortedRecords[s].date < dateStr && typeof sortedRecords[s].weight === 'number'){
+              prevRec = sortedRecords[s];
+              break;
+            }
           }
-        }
-        if(prevRec){
-          var dDiff = rec.weight - prevRec.weight;
-          var diffCls = dDiff < 0 ? 'down' : (dDiff > 0 ? 'up' : 'flat');
-          var arrow = dDiff < 0 ? '▼' : (dDiff > 0 ? '▲' : '—');
-          html += '<div class="row-bot '+diffCls+'">'+arrow+Math.abs(dDiff).toFixed(1)+'</div>';
+          if(prevRec){
+            var dDiff = rec.weight - prevRec.weight;
+            var diffCls = dDiff < 0 ? 'down' : (dDiff > 0 ? 'up' : 'flat');
+            var arrow = dDiff < 0 ? '▼' : (dDiff > 0 ? '▲' : '—');
+            html += '<div class="row-bot '+diffCls+'">'+arrow+Math.abs(dDiff).toFixed(1)+'</div>';
+          } else {
+            html += '<div class="row-bot flat" style="opacity:0;">—0.0</div>';
+          }
         } else {
-          html += '<div class="row-bot flat" style="opacity:0;">—0.0</div>';
+          // 无体重：显示运动标记文字
+          html += '<div class="row-mid" style="visibility:hidden;">0.0</div>';
+          html += '<div class="row-bot flat" style="visibility:hidden;">—0.0</div>';
         }
         if(isOvulationDay){
           html += '<span class="ovulation-mark"></span>';
@@ -1848,11 +1864,15 @@
     for(var i=0;i<sorted.length;i++){
       var r = sorted[i];
       var phase = getPhaseForDate(r.date);
-      var prev = (i < sorted.length-1) ? sorted[i+1] : null;
+      var prev = null;
+      // 找上一条有体重的记录
+      for(var j=i+1;j<sorted.length;j++){
+        if(typeof sorted[j].weight === 'number'){ prev = sorted[j]; break; }
+      }
       var diff = prev ? (r.weight - prev.weight) : 0;
       var diffStr = '';
       var diffCls = 'flat';
-      if(prev){
+      if(prev && typeof r.weight === 'number'){
         if(diff < 0){ diffStr = '↓ ' + Math.abs(diff).toFixed(1); diffCls = 'down'; }
         else if(diff > 0){ diffStr = '↑ ' + diff.toFixed(1); diffCls = 'up'; }
         else { diffStr = '— 0.0'; diffCls = 'flat'; }
@@ -1885,8 +1905,12 @@
       html += measureHtml;
       html += '</div>';
       html += '<div class="history-weight">';
-      html += '<div class="num">'+r.weight.toFixed(1)+'<span class="unit"> 斤</span></div>';
-      if(prev) html += '<div class="history-diff '+diffCls+'">'+diffStr+'</div>';
+      if(typeof r.weight === 'number'){
+        html += '<div class="num">'+r.weight.toFixed(1)+'<span class="unit"> 斤</span></div>';
+        if(prev) html += '<div class="history-diff '+diffCls+'">'+diffStr+'</div>';
+      } else {
+        html += '<div class="num" style="color:var(--text-dim);font-size:13px;">仅运动</div>';
+      }
       html += '</div>';
       html += '<button class="delete-btn" data-date="'+r.date+'">×</button>';
       html += '</div>';
@@ -1925,7 +1949,7 @@
       var m = r.measures || {};
       var row = [
         r.date,
-        r.weight.toFixed(1),
+        (typeof r.weight === 'number') ? r.weight.toFixed(1) : '',
         m.chest ? m.chest.toFixed(1) : '',
         m.waist ? m.waist.toFixed(1) : '',
         m.abdomen ? m.abdomen.toFixed(1) : '',
