@@ -869,12 +869,75 @@
   .trend-card{
     padding:16px 12px;
   }
+  .trend-selector{
+    position:relative;
+    margin-bottom:12px;
+  }
+  .trend-selector-toggle{
+    width:100%;
+    border:1.5px solid var(--border);
+    background:var(--bg);
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:13px;
+    color:var(--text);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-family:inherit;
+    -webkit-appearance:none;
+    appearance:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .trend-selector-toggle .arrow{
+    transition:transform 0.2s;
+    color:var(--text-light);
+    font-size:11px;
+  }
+  .trend-selector.open .trend-selector-toggle .arrow{
+    transform:rotate(180deg);
+  }
+  .trend-selector-panel{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+    z-index:10;
+    box-shadow:0 6px 20px rgba(0,0,0,0.08);
+    max-height:280px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .trend-selector.open .trend-selector-panel{
+    display:block;
+  }
+  .trend-selector-actions{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:8px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+  }
+  .trend-selector-actions button{
+    border:none;
+    background:none;
+    color:var(--accent);
+    font-size:12px;
+    font-family:inherit;
+    cursor:pointer;
+    padding:2px 6px;
+  }
   .trend-checkboxes{
     display:flex;
     flex-wrap:wrap;
-    gap:6px 10px;
+    gap:6px 8px;
     justify-content:center;
-    margin-bottom:12px;
   }
   .trend-check-item{
     display:flex;
@@ -883,7 +946,7 @@
     font-size:12px;
     color:var(--text);
     cursor:pointer;
-    padding:4px 10px;
+    padding:5px 12px;
     border-radius:20px;
     border:1.5px solid var(--border);
     background:var(--bg);
@@ -1182,7 +1245,19 @@
       <div class="trend-section">
         <div class="section-title" style="margin-top:20px;"><span class="dot" style="background:var(--accent)"></span> 周期体重趋势对比</div>
         <div class="card trend-card">
-          <div class="trend-checkboxes" id="trendCheckboxes"></div>
+          <div class="trend-selector" id="trendSelector">
+            <button class="trend-selector-toggle" id="trendSelectorToggle">
+              <span id="trendSelectorLabel">选择周期</span>
+              <span class="arrow">▼</span>
+            </button>
+            <div class="trend-selector-panel">
+              <div class="trend-selector-actions">
+                <button id="trendSelectAll">全选</button>
+                <button id="trendClearAll">清空</button>
+              </div>
+              <div class="trend-checkboxes" id="trendCheckboxes"></div>
+            </div>
+          </div>
           <canvas id="trendCanvas" width="680" height="480"></canvas>
           <div class="trend-legend" id="trendLegend"></div>
           <div class="trend-empty" id="trendEmpty" style="display:none;">至少需要1个经期周期+体重数据才能绘制</div>
@@ -2073,11 +2148,32 @@
     return cycles;
   }
 
-  // 渲染勾选框
+  // 渲染勾选框（折叠选择器）
+  function updateTrendSelectorLabel(){
+    var allCycles = buildTrendCycles();
+    var labelEl = document.getElementById('trendSelectorLabel');
+    var total = allCycles.length;
+    var selectedCount = allCycles.filter(function(c){ return trendSelected[c.start]; }).length;
+    if(total === 0){
+      labelEl.textContent = '暂无周期数据';
+    } else if(selectedCount === total){
+      labelEl.textContent = '已选全部 ' + total + ' 个周期';
+    } else if(selectedCount === 0){
+      labelEl.textContent = '请选择周期（已选 0/' + total + '）';
+    } else {
+      // 显示前几个选中项
+      var sel = allCycles.filter(function(c){ return trendSelected[c.start]; });
+      var labels = sel.map(function(c){ return c.start.substring(5); });
+      var txt = labels.length <= 3 ? labels.join('、') : labels.slice(0,3).join('、') + ' 等';
+      labelEl.textContent = '已选 ' + selectedCount + '/' + total + '：' + txt;
+    }
+  }
+
   function renderTrendCheckboxes(cycles){
     var container = document.getElementById('trendCheckboxes');
     if(cycles.length === 0){
-      container.innerHTML = '';
+      container.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:8px;text-align:center;">请先添加经期日期</div>';
+      updateTrendSelectorLabel();
       return;
     }
     // 默认全部选中
@@ -2105,13 +2201,44 @@
     container.innerHTML = html;
 
     container.querySelectorAll('.trend-check-item').forEach(function(el){
-      el.addEventListener('click', function(){
+      el.addEventListener('click', function(e){
+        e.stopPropagation();
         var s = el.dataset.start;
         trendSelected[s] = !trendSelected[s];
+        renderTrendCheckboxes(buildTrendCycles());
         renderTrendChart();
       });
     });
+
+    updateTrendSelectorLabel();
   }
+
+  // 折叠选择器交互
+  (function(){
+    var sel = document.getElementById('trendSelector');
+    var toggle = document.getElementById('trendSelectorToggle');
+    toggle.addEventListener('click', function(e){
+      e.stopPropagation();
+      sel.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e){
+      if(!sel.contains(e.target)) sel.classList.remove('open');
+    });
+    document.getElementById('trendSelectAll').addEventListener('click', function(e){
+      e.stopPropagation();
+      var cycles = buildTrendCycles();
+      cycles.forEach(function(c){ trendSelected[c.start] = true; });
+      renderTrendCheckboxes(cycles);
+      renderTrendChart();
+    });
+    document.getElementById('trendClearAll').addEventListener('click', function(e){
+      e.stopPropagation();
+      var cycles = buildTrendCycles();
+      cycles.forEach(function(c){ trendSelected[c.start] = false; });
+      renderTrendCheckboxes(cycles);
+      renderTrendChart();
+    });
+  })();
 
   function renderTrendChart(){
     var canvas = document.getElementById('trendCanvas');
