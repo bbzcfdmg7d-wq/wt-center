@@ -964,15 +964,7 @@
     display:none;
   }
   .trend-check-item.checked::before{
-    content:'';
-    position:absolute;
-    left:10px;
-    top:50%;
-    transform:translateY(-50%);
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:#fff;
+    content:none;
   }
   .trend-card canvas{
     display:block;
@@ -2169,7 +2161,7 @@
     } else {
       // 显示前几个选中项
       var sel = allCycles.filter(function(c){ return trendSelected[c.start]; });
-      var labels = sel.map(function(c){ return c.start.substring(5); });
+      var labels = sel.map(function(c){ return parseInt(c.start.substring(5,7),10) + '月'; });
       var txt = labels.length <= 3 ? labels.join('、') : labels.slice(0,3).join('、') + ' 等';
       labelEl.textContent = '已选 ' + selectedCount + '/' + total + '：' + txt;
     }
@@ -2196,7 +2188,7 @@
       var c = cycles[i];
       var color = TREND_COLORS[i % TREND_COLORS.length];
       var checked = trendSelected[c.start];
-      var label = c.start.substring(5); // MM-DD
+      var label = parseInt(c.start.substring(5,7),10) + '月'; // X月
       var bgStyle = checked ? 'background:' + color + ';color:#fff;border-color:transparent;' : '';
       html += '<div class="trend-check-item ' + (checked ? 'checked' : '') + '" data-start="' + c.start + '" style="' + bgStyle + '">';
       html += label;
@@ -2368,7 +2360,7 @@
         if(allCycles[ai].start === c.start){ colorIdx = ai; break; }
       }
       var color = TREND_COLORS[colorIdx % TREND_COLORS.length];
-      var label = c.start.substring(5);
+      var label = parseInt(c.start.substring(5,7),10) + '月';
 
       // 折线
       ctx.strokeStyle = color;
