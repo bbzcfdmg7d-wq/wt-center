@@ -731,6 +731,86 @@
     font-size:14px;
   }
   /* Toast */
+  /* 工具页：计算器样式 */
+  .calc-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .calc-input{
+    flex:1;
+    min-width:0;
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:16px;
+    color:var(--text);
+    background:var(--bg);
+    font-family:inherit;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .calc-input:focus{
+    outline:none;
+    border-color:var(--accent);
+    background:#fff;
+  }
+  .calc-select{
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    padding:0 12px;
+    font-size:14px;
+    color:var(--text);
+    background:var(--bg);
+    font-family:inherit;
+    flex-shrink:0;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .calc-btn{
+    width:100%;
+    border:none;
+    background:var(--accent);
+    color:#fff;
+    padding:13px;
+    border-radius:12px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+    margin-top:4px;
+    box-shadow:0 2px 8px rgba(126,179,165,0.3);
+  }
+  .calc-btn:active{opacity:0.85;}
+  .calc-result{
+    margin-top:14px;
+    padding:16px;
+    background:var(--accent-light);
+    border-radius:12px;
+    font-size:15px;
+    color:var(--text);
+    line-height:1.8;
+    display:none;
+  }
+  .calc-result.show{display:block;}
+  .calc-result .result-num{
+    font-size:24px;
+    font-weight:700;
+    color:var(--accent);
+  }
+  .calc-result .result-label{
+    font-size:13px;
+    color:var(--text-light);
+    margin-left:4px;
+  }
+  .calc-result .bmi-tag{
+    display:inline-block;
+    padding:3px 12px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:600;
+    margin-left:8px;
+  }
   .toast{
     position:fixed;
     bottom:80px;
@@ -1082,6 +1162,48 @@
       </div>
     </div>
   </div>
+
+  <!-- 页面6：工具（热量换算 + BMI计算） -->
+  <div class="page" id="page-tools">
+    <div class="section">
+      <!-- 热量单位换算 -->
+      <div class="section-title"><span class="dot" style="background:var(--accent)"></span> 热量单位换算</div>
+      <div class="card" style="padding:20px;">
+        <div class="calc-row">
+          <input type="number" id="calInput" class="calc-input" placeholder="输入数值" step="0.01">
+          <select id="calUnit" class="calc-select">
+            <option value="kj">千焦 kJ</option>
+            <option value="kcal">大卡 kcal</option>
+          </select>
+        </div>
+        <button class="calc-btn" id="calConvertBtn">换算</button>
+        <div class="calc-result" id="calResult"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <!-- BMI计算 -->
+      <div class="section-title"><span class="dot" style="background:var(--blue)"></span> BMI计算</div>
+      <div class="card" style="padding:20px;">
+        <div class="calc-row" style="margin-bottom:10px;">
+          <input type="number" id="bmiHeight" class="calc-input" placeholder="身高" step="0.1">
+          <select id="bmiHeightUnit" class="calc-select">
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+          </select>
+        </div>
+        <div class="calc-row">
+          <input type="number" id="bmiWeight" class="calc-input" placeholder="体重" step="0.1">
+          <select id="bmiWeightUnit" class="calc-select">
+            <option value="jin">斤</option>
+            <option value="kg">kg</option>
+          </select>
+        </div>
+        <button class="calc-btn" id="bmiCalcBtn" style="background:var(--blue-text);">计算BMI</button>
+        <div class="calc-result" id="bmiResult"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 底部导航栏 -->
@@ -1105,6 +1227,10 @@
   <button class="tab-item" data-page="history">
     <span class="tab-icon">≡</span>
     <span class="tab-label">历史</span>
+  </button>
+  <button class="tab-item" data-page="tools">
+    <span class="tab-icon">⊕</span>
+    <span class="tab-label">工具</span>
   </button>
 </nav>
 
@@ -1444,7 +1570,8 @@
     calendar: {title:'数据概览', subtitle:'日历与统计'},
     measure: {title:'体围数据', subtitle:'所有维度的历史记录'},
     period: {title:'经期管理', subtitle:'追踪生理周期'},
-    history: {title:'历史记录', subtitle:'全部体重记录'}
+    history: {title:'历史记录', subtitle:'全部体重记录'},
+    tools: {title:'实用工具', subtitle:'热量换算与BMI计算'}
   };
 
   function switchPage(pageName){
@@ -2043,6 +2170,62 @@
   window.addEventListener('resize', function(){
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(renderCalendar, 200);
+  });
+
+  // ====== 工具页：热量换算 + BMI计算 ======
+  // 热量换算：1大卡(kcal) = 4.184千焦(kJ)
+  document.getElementById('calConvertBtn').addEventListener('click', function(){
+    var val = parseFloat(document.getElementById('calInput').value);
+    var unit = document.getElementById('calUnit').value;
+    var resultEl = document.getElementById('calResult');
+    if(isNaN(val) || val <= 0){ showToast('请输入有效数值'); return; }
+
+    var resultNum, resultLabel;
+    if(unit === 'kj'){
+      // 千焦 → 大卡
+      var kcal = val / 4.184;
+      resultNum = kcal.toFixed(1);
+      resultLabel = '大卡(kcal)';
+    } else {
+      // 大卡 → 千焦
+      var kj = val * 4.184;
+      resultNum = kj.toFixed(1);
+      resultLabel = '千焦(kJ)';
+    }
+
+    resultEl.innerHTML = '<span class="result-num">' + resultNum + '</span><span class="result-label">' + resultLabel + '</span>';
+    resultEl.classList.add('show');
+  });
+
+  // BMI计算
+  document.getElementById('bmiCalcBtn').addEventListener('click', function(){
+    var hVal = parseFloat(document.getElementById('bmiHeight').value);
+    var hUnit = document.getElementById('bmiHeightUnit').value;
+    var wVal = parseFloat(document.getElementById('bmiWeight').value);
+    var wUnit = document.getElementById('bmiWeightUnit').value;
+    var resultEl = document.getElementById('bmiResult');
+
+    if(isNaN(hVal) || hVal <= 0 || isNaN(wVal) || wVal <= 0){
+      showToast('请输入有效的身高和体重');
+      return;
+    }
+
+    // 身高统一转米
+    var heightM = (hUnit === 'cm') ? hVal / 100 : hVal;
+    // 体重统一转kg
+    var weightKg = (wUnit === 'jin') ? wVal * 0.5 : wVal;
+
+    var bmi = weightKg / (heightM * heightM);
+    var bmiStr = bmi.toFixed(1);
+
+    var tag, tagColor;
+    if(bmi < 18.5){ tag = '偏瘦'; tagColor = 'background:var(--text-dim);color:#fff;'; }
+    else if(bmi <= 23.9){ tag = '正常'; tagColor = 'background:var(--accent);color:#fff;'; }
+    else if(bmi <= 27.9){ tag = '超重'; tagColor = 'background:#e8a040;color:#fff;'; }
+    else { tag = '肥胖'; tagColor = 'background:#c45a5a;color:#fff;'; }
+
+    resultEl.innerHTML = '<span class="result-num">' + bmiStr + '</span><span class="bmi-tag" style="' + tagColor + '">' + tag + '</span>';
+    resultEl.classList.add('show');
   });
 
 })();
