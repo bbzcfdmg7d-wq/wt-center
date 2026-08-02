@@ -936,22 +936,25 @@
   .trend-checkboxes{
     display:flex;
     flex-wrap:wrap;
-    gap:6px 8px;
+    gap:8px;
     justify-content:center;
   }
   .trend-check-item{
     display:flex;
     align-items:center;
+    justify-content:center;
     gap:4px;
     font-size:12px;
     color:var(--text);
     cursor:pointer;
-    padding:5px 12px;
+    padding:5px 14px;
     border-radius:20px;
     border:1.5px solid var(--border);
     background:var(--bg);
     transition:all 0.15s;
     -webkit-tap-highlight-color:transparent;
+    min-width:62px;
+    box-sizing:border-box;
   }
   .trend-check-item.checked{
     border-color:transparent;
