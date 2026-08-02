@@ -867,7 +867,7 @@
   }
   /* 月度趋势图 */
   .trend-card{
-    padding:16px 12px;
+    padding:16px 8px;
   }
   .trend-selector{
     position:relative;
@@ -970,9 +970,8 @@
   .trend-card canvas{
     display:block;
     width:100%;
-    max-width:340px;
-    height:auto;
-    margin:0 auto;
+    height:260px;
+    margin:0;
   }
   .trend-legend{
     display:flex;
@@ -2269,12 +2268,10 @@
 
     // ====== 高 DPI 适配 ======
     var dpr = window.devicePixelRatio || 1;
-    var cssW = 340;
+    var cssW = canvas.clientWidth || 320;
     var cssH = 260;
     canvas.width = cssW * dpr;
     canvas.height = cssH * dpr;
-    canvas.style.width = cssW + 'px';
-    canvas.style.height = cssH + 'px';
     ctx.scale(dpr, dpr);
 
     var W = cssW;
