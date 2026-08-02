@@ -869,6 +869,41 @@
   .trend-card{
     padding:16px 12px;
   }
+  .trend-checkboxes{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 10px;
+    justify-content:center;
+    margin-bottom:12px;
+  }
+  .trend-check-item{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    font-size:12px;
+    color:var(--text);
+    cursor:pointer;
+    padding:4px 10px;
+    border-radius:20px;
+    border:1.5px solid var(--border);
+    background:var(--bg);
+    transition:all 0.15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .trend-check-item.checked{
+    border-color:transparent;
+    font-weight:600;
+  }
+  .trend-check-item .check-dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    border:1.5px solid var(--text-dim);
+    flex-shrink:0;
+  }
+  .trend-check-item.checked .check-dot{
+    border:none;
+  }
   .trend-card canvas{
     display:block;
     width:100%;
@@ -1147,9 +1182,10 @@
       <div class="trend-section">
         <div class="section-title" style="margin-top:20px;"><span class="dot" style="background:var(--accent)"></span> 周期体重趋势对比</div>
         <div class="card trend-card">
-          <canvas id="trendCanvas" width="340" height="240"></canvas>
+          <div class="trend-checkboxes" id="trendCheckboxes"></div>
+          <canvas id="trendCanvas" width="680" height="480"></canvas>
           <div class="trend-legend" id="trendLegend"></div>
-          <div class="trend-empty" id="trendEmpty" style="display:none;">至少需要2个经期周期+体重数据才能对比</div>
+          <div class="trend-empty" id="trendEmpty" style="display:none;">至少需要1个经期周期+体重数据才能绘制</div>
         </div>
       </div>
     </div>
@@ -2011,29 +2047,12 @@
 
   // ====== 月度体重趋势对比（以经期第一天为周期开始） ======
   var TREND_COLORS = ['#7eb3a5','#d4869a','#6b9fd8','#c9a83a','#a08ad8','#e88aa0','#5ab0a8'];
-  var CYCLE_LEN = 30; // 周期长度
+  var CYCLE_LEN = 30;
+  var trendSelected = {}; // {周期start: true/false}
 
-  function renderTrendChart(){
-    var canvas = document.getElementById('trendCanvas');
-    var emptyEl = document.getElementById('trendEmpty');
-    var legendEl = document.getElementById('trendLegend');
-    var ctx = canvas.getContext('2d');
-
-    // 清空
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    legendEl.innerHTML = '';
-
-    // 获取排序后的经期日期
+  // 构建所有可用周期数据
+  function buildTrendCycles(){
     var periods = state.periods.slice().sort();
-    if(periods.length < 2){
-      canvas.style.display = 'none';
-      legendEl.style.display = 'none';
-      emptyEl.style.display = 'block';
-      return;
-    }
-
-    // 为每个经期周期，收集该周期内（经期第一天 ~ +29天）有体重的记录
-    // 将日期映射为周期内第几天（0-29）
     var cycles = [];
     for(var i = 0; i < periods.length; i++){
       var start = periods[i];
@@ -2043,7 +2062,7 @@
         var r = state.records[j];
         if(typeof r.weight !== 'number') continue;
         if(r.date >= start && r.date <= end){
-          var dayOffset = daysBetween(start, r.date); // 0~29
+          var dayOffset = daysBetween(start, r.date);
           points.push({ day: dayOffset, weight: r.weight, date: r.date });
         }
       }
@@ -2051,6 +2070,64 @@
         cycles.push({ start: start, points: points });
       }
     }
+    return cycles;
+  }
+
+  // 渲染勾选框
+  function renderTrendCheckboxes(cycles){
+    var container = document.getElementById('trendCheckboxes');
+    if(cycles.length === 0){
+      container.innerHTML = '';
+      return;
+    }
+    // 默认全部选中
+    if(Object.keys(trendSelected).length === 0){
+      cycles.forEach(function(c){ trendSelected[c.start] = true; });
+    }
+    // 清理已不存在的
+    cycles.forEach(function(c){
+      if(!(c.start in trendSelected)) trendSelected[c.start] = true;
+    });
+
+    var html = '';
+    for(var i = 0; i < cycles.length; i++){
+      var c = cycles[i];
+      var color = TREND_COLORS[i % TREND_COLORS.length];
+      var checked = trendSelected[c.start];
+      var label = c.start.substring(5); // MM-DD
+      var bgStyle = checked ? 'background:' + color + ';color:#fff;border-color:transparent;' : '';
+      var dotStyle = checked ? 'background:' + color + ';border:none;' : '';
+      html += '<div class="trend-check-item ' + (checked ? 'checked' : '') + '" data-start="' + c.start + '" style="' + bgStyle + '">';
+      html += '<span class="check-dot" style="' + dotStyle + '"></span>';
+      html += label;
+      html += '</div>';
+    }
+    container.innerHTML = html;
+
+    container.querySelectorAll('.trend-check-item').forEach(function(el){
+      el.addEventListener('click', function(){
+        var s = el.dataset.start;
+        trendSelected[s] = !trendSelected[s];
+        renderTrendChart();
+      });
+    });
+  }
+
+  function renderTrendChart(){
+    var canvas = document.getElementById('trendCanvas');
+    var emptyEl = document.getElementById('trendEmpty');
+    var legendEl = document.getElementById('trendLegend');
+    var ctx = canvas.getContext('2d');
+
+    var allCycles = buildTrendCycles();
+    renderTrendCheckboxes(allCycles);
+
+    // 筛选选中的周期
+    var cycles = allCycles.filter(function(c){ return trendSelected[c.start]; });
+
+    // 清空
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    legendEl.innerHTML = '';
 
     if(cycles.length < 1){
       canvas.style.display = 'none';
@@ -2063,14 +2140,23 @@
     legendEl.style.display = 'flex';
     emptyEl.style.display = 'none';
 
-    // 绘图参数
-    var W = canvas.width;
-    var H = canvas.height;
-    var padL = 38, padR = 12, padT = 16, padB = 28;
+    // ====== 高 DPI 适配 ======
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = 340;
+    var cssH = 260;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    ctx.scale(dpr, dpr);
+
+    var W = cssW;
+    var H = cssH;
+    var padL = 40, padR = 14, padT = 18, padB = 44;
     var plotW = W - padL - padR;
     var plotH = H - padT - padB;
 
-    // Y轴范围：所有体重的 min~max
+    // Y轴范围
     var allWeights = [];
     cycles.forEach(function(c){
       c.points.forEach(function(p){ allWeights.push(p.weight); });
@@ -2078,18 +2164,51 @@
     var wMin = Math.min.apply(null, allWeights);
     var wMax = Math.max.apply(null, allWeights);
     var wRange = wMax - wMin;
-    if(wRange < 2) wRange = 2; // 最小范围2斤
-    wMin -= wRange * 0.15;
-    wMax += wRange * 0.15;
+    if(wRange < 2) wRange = 2;
+    wMin -= wRange * 0.2;
+    wMax += wRange * 0.2;
     wRange = wMax - wMin;
 
     function xFor(day){ return padL + (day / (CYCLE_LEN - 1)) * plotW; }
     function yFor(w){ return padT + (1 - (w - wMin) / wRange) * plotH; }
 
-    // 背景网格
+    // ====== 横坐标：以生理期为阶段轴 ======
+    // 经期: 0~6天(粉), 卵泡期: 7~9天(白), 排卵期: 10~16天(蓝), 黄体期: 23~29天(黄)
+    // 排卵日 = 30-14 = 第16天
+    // 阶段背景色带
+    var phases = [
+      { start: 0, end: 6, color: 'rgba(244,205,217,0.25)', label: '经期' },
+      { start: 7, end: 9, color: 'transparent', label: '' },
+      { start: 10, end: 16, color: 'rgba(179,209,240,0.25)', label: '排卵期' },
+      { start: 23, end: 29, color: 'rgba(240,223,160,0.2)', label: '黄体期' }
+    ];
+    phases.forEach(function(ph){
+      if(ph.color === 'transparent') return;
+      var x1 = xFor(ph.start);
+      var x2 = xFor(ph.end);
+      ctx.fillStyle = ph.color;
+      ctx.fillRect(x1, padT, x2 - x1, plotH);
+    });
+
+    // 横轴阶段标签
+    ctx.textAlign = 'center';
+    ctx.font = '10px -apple-system,sans-serif';
+    var phaseLabels = [
+      { day: 3, text: '经期', color: '#d4869a' },
+      { day: 8, text: '卵泡期', color: '#9a9a9a' },
+      { day: 13, text: '排卵期', color: '#6b9fd8' },
+      { day: 20, text: '黄体期', color: '#c9a83a' }
+    ];
+    phaseLabels.forEach(function(pl){
+      ctx.fillStyle = pl.color;
+      ctx.fillText(pl.text, xFor(pl.day), H - padB + 14);
+    });
+
+    // Y轴刻度
     ctx.strokeStyle = '#f0eee9';
-    ctx.lineWidth = 1;
-    // 横线（体重刻度，4条）
+    ctx.lineWidth = 0.5;
+    ctx.textAlign = 'right';
+    ctx.font = '10px -apple-system,sans-serif';
     for(var g = 0; g <= 4; g++){
       var y = padT + (g / 4) * plotH;
       ctx.beginPath();
@@ -2098,35 +2217,35 @@
       ctx.stroke();
       var labelW = wMax - (g / 4) * wRange;
       ctx.fillStyle = '#c4c4c4';
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(labelW.toFixed(0), padL - 4, y + 3);
-    }
-    // 竖线（天数刻度，每5天）
-    for(var d = 0; d <= CYCLE_LEN - 1; d += 5){
-      var x = xFor(d);
-      ctx.strokeStyle = '#f0eee9';
-      ctx.beginPath();
-      ctx.moveTo(x, padT);
-      ctx.lineTo(x, H - padB);
-      ctx.stroke();
-      ctx.fillStyle = '#c4c4c4';
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(d + 'd', x, H - padB + 12);
+      ctx.fillText(labelW.toFixed(0), padL - 6, y + 3);
     }
 
-    // 绘制每个周期的折线
+    // 天数小刻度（每5天，在阶段标签下方）
+    ctx.textAlign = 'center';
+    ctx.font = '8px -apple-system,sans-serif';
+    ctx.fillStyle = '#d4d4d4';
+    for(var d = 0; d <= CYCLE_LEN - 1; d += 5){
+      ctx.fillText(d + 'd', xFor(d), H - padB + 28);
+    }
+
+    // ====== 绘制折线 ======
+    // 找到每个周期在 allCycles 中的索引，以获取颜色
     var legendHtml = '';
     for(var ci = 0; ci < cycles.length; ci++){
       var c = cycles[ci];
-      var color = TREND_COLORS[ci % TREND_COLORS.length];
-      var label = c.start.substring(5); // MM-DD
+      // 从 allCycles 找索引取颜色
+      var colorIdx = 0;
+      for(var ai = 0; ai < allCycles.length; ai++){
+        if(allCycles[ai].start === c.start){ colorIdx = ai; break; }
+      }
+      var color = TREND_COLORS[colorIdx % TREND_COLORS.length];
+      var label = c.start.substring(5);
 
       // 折线
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.8;
+      ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.beginPath();
       for(var pi = 0; pi < c.points.length; pi++){
         var px = xFor(c.points[pi].day);
@@ -2142,8 +2261,14 @@
         var px2 = xFor(c.points[pi2].day);
         var py2 = yFor(c.points[pi2].weight);
         ctx.beginPath();
-        ctx.arc(px2, py2, 2.5, 0, Math.PI * 2);
+        ctx.arc(px2, py2, 3, 0, Math.PI * 2);
         ctx.fill();
+        // 白色内圈
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(px2, py2, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
       }
 
       legendHtml += '<div class="trend-legend-item"><span class="trend-legend-line" style="background:' + color + '"></span>' + label + '</div>';
