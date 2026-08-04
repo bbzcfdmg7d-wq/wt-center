@@ -868,7 +868,28 @@
   /* 月度趋势图 */
   .trend-card{
     padding:16px 8px;
+    position:relative;
   }
+  .trend-tooltip{
+    position:absolute;
+    pointer-events:none;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:10px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.12);
+    padding:8px 10px;
+    font-size:12px;
+    line-height:1.5;
+    white-space:nowrap;
+    transform:translate(-50%, -100%);
+    transition:opacity 0.15s;
+    z-index:10;
+    display:none;
+  }
+  .trend-tooltip .tt-head{font-weight:600;color:var(--text);margin-bottom:2px;}
+  .trend-tooltip .tt-row{display:flex;align-items:center;gap:6px;color:var(--text-light);}
+  .trend-tooltip .tt-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .trend-tooltip .tt-val{font-weight:600;color:var(--text);}
   .trend-selector{
     position:relative;
     margin-bottom:12px;
@@ -1257,6 +1278,7 @@
             </div>
           </div>
           <canvas id="trendCanvas" width="680" height="480"></canvas>
+          <div class="trend-tooltip" id="trendTooltip"></div>
           <div class="trend-legend" id="trendLegend"></div>
           <div class="trend-empty" id="trendEmpty" style="display:none;">至少需要1个经期周期+体重数据才能绘制</div>
         </div>
@@ -2132,6 +2154,8 @@
   var TREND_COLORS = ['#7eb3a5','#d4869a','#6b9fd8','#c9a83a','#a08ad8','#e88aa0','#5ab0a8'];
   var CYCLE_LEN = 30;
   var trendSelected = {}; // {周期start: true/false}
+  var trendHitPoints = []; // 数据点屏幕坐标缓存，供点击 tooltip 用
+  var trendChartLayout = null; // 缓存画布布局参数
 
   // 构建所有可用周期数据
   function buildTrendCycles(){
@@ -2409,7 +2433,102 @@
       legendHtml += '<div class="trend-legend-item"><span class="trend-legend-line" style="background:' + color + '"></span>' + label + '</div>';
     }
     legendEl.innerHTML = legendHtml;
+
+    // ====== 收集数据点屏幕坐标，供点击 tooltip 使用 ======
+    trendHitPoints = [];
+    trendChartLayout = { padL: padL, padR: padR, padT: padT, padB: padB, W: W, H: H, cssW: cssW, cssH: cssH };
+    for(var ci2 = 0; ci2 < cycles.length; ci2++){
+      var cc = cycles[ci2];
+      var colorIdx2 = 0;
+      for(var ai2 = 0; ai2 < allCycles.length; ai2++){
+        if(allCycles[ai2].start === cc.start){ colorIdx2 = ai2; break; }
+      }
+      var ccColor = TREND_COLORS[colorIdx2 % TREND_COLORS.length];
+      var ccLabel = parseInt(cc.start.substring(5,7),10) + '月';
+      for(var pi3 = 0; pi3 < cc.points.length; pi3++){
+        var hp = cc.points[pi3];
+        trendHitPoints.push({
+          x: xFor(hp.day),
+          y: yFor(hp.weight),
+          weight: hp.weight,
+          date: hp.date,
+          day: hp.day,
+          color: ccColor,
+          label: ccLabel
+        });
+      }
+    }
   }
+
+  // ====== 趋势图点击/触摸交互：显示数据点详情 ======
+  (function(){
+    var canvas = document.getElementById('trendCanvas');
+    var tooltip = document.getElementById('trendTooltip');
+    var card = canvas.closest('.trend-card');
+
+    function handleEvent(clientX, clientY){
+      if(!trendHitPoints.length || !trendChartLayout) return;
+      var rect = canvas.getBoundingClientRect();
+      var layout = trendChartLayout;
+      // canvas CSS 尺寸可能与内部坐标不同，需换算
+      var scaleX = (rect.width || layout.cssW) / layout.cssW;
+      var scaleY = (rect.height || layout.cssH) / layout.cssH;
+      var mx = (clientX - rect.left) / scaleX;
+      var my = (clientY - rect.top) / scaleY;
+
+      // 找最近的数据点（屏幕像素距离）
+      var best = null;
+      var bestDist = Infinity;
+      for(var i = 0; i < trendHitPoints.length; i++){
+        var p = trendHitPoints[i];
+        var dx = (p.x - mx) * scaleX;
+        var dy = (p.y - my) * scaleY;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < bestDist){
+          bestDist = dist;
+          best = p;
+        }
+      }
+      // 命中阈值 30px 内才算
+      if(!best || bestDist > 30){
+        tooltip.style.display = 'none';
+        return;
+      }
+
+      // tooltip 内容
+      var dateParts = best.date.split('-');
+      var dateStr = parseInt(dateParts[1],10) + '月' + parseInt(dateParts[2],10) + '日';
+      var html = '<div class="tt-head">' + dateStr + '（周期第' + (best.day + 1) + '天）</div>';
+      html += '<div class="tt-row"><span class="tt-dot" style="background:' + best.color + '"></span>' + best.label + ' <span class="tt-val">' + best.weight.toFixed(1) + ' 斤</span></div>';
+      tooltip.innerHTML = html;
+
+      // 定位（相对于 card，用 canvas 在 card 内的偏移）
+      var canvasOffsetX = (rect.left - card.getBoundingClientRect().left) + best.x * scaleX;
+      var canvasOffsetY = (rect.top - card.getBoundingClientRect().top) + best.y * scaleY;
+      tooltip.style.left = canvasOffsetX + 'px';
+      tooltip.style.top = (canvasOffsetY - 8) + 'px';
+      tooltip.style.display = 'block';
+    }
+
+    function hideTooltip(){
+      tooltip.style.display = 'none';
+    }
+
+    canvas.addEventListener('click', function(e){
+      handleEvent(e.clientX, e.clientY);
+    });
+    // 移动端 touch
+    canvas.addEventListener('touchstart', function(e){
+      if(e.touches.length > 0){
+        e.preventDefault();
+        handleEvent(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+    // 点击空白处隐藏
+    document.addEventListener('click', function(e){
+      if(!canvas.contains(e.target)) hideTooltip();
+    });
+  })();
 
   // ====== 历史列表 ======
   function renderHistory(){
