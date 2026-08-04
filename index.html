@@ -1638,24 +1638,31 @@
     }
     if(!basePeriod) return 'none';
 
-    if(nextPeriod){
-      var nextOffset = daysBetween(nextPeriod, dateStr);
-      if(nextOffset >= 0){
-        return getPhaseForDateInner(nextPeriod, dateStr);
+    // 日期已进入下一条实际经期之后，用下一条经期作为基准重新计算
+    if(nextPeriod && daysBetween(nextPeriod, dateStr) >= 0){
+      // 递归找 nextPeriod 之后的实际经期
+      var nextNext = null;
+      for(var j=0;j<periods.length;j++){
+        if(periods[j] > nextPeriod){ nextNext = periods[j]; break; }
       }
+      return getPhaseForDateInner(nextPeriod, dateStr, nextNext);
     }
-    return getPhaseForDateInner(basePeriod, dateStr);
+    // 日期在 basePeriod 周期内：把实际下一条经期传入，修正排卵日和黄体期
+    return getPhaseForDateInner(basePeriod, dateStr, nextPeriod);
   }
 
-  function getPhaseForDateInner(lastPeriodDate, dateStr){
+  // 传入实际的下一条经期（可选），用于修正排卵日和黄体期
+  function getPhaseForDateInner(lastPeriodDate, dateStr, actualNextPeriod){
     var dayOffset = daysBetween(lastPeriodDate, dateStr);
     if(dayOffset <= PERIOD_DAYS - 1) return 'period';
 
-    var nextPeriod = getNextPeriodDate(lastPeriodDate);
-    var ovulationDay = getOvulationDate(lastPeriodDate);
+    // 优先用实际下一条经期，没有才用 30 天预测
+    var nextPeriod = actualNextPeriod || getNextPeriodDate(lastPeriodDate);
+    // 排卵日 = 下一次经期前 14 天（黄体期固定 14 天）
+    var ovulationDay = addDays(nextPeriod, -14);
     var ovulationStart = addDays(ovulationDay, -5);
     var ovulationEnd = addDays(ovulationDay, 1);
-    // 黄体期改为：预测经期的前7天
+    // 黄体期：实际/预测经期的前 7 天
     var lutealStart = addDays(nextPeriod, -7);
     var lutealEnd = addDays(nextPeriod, -1);
 
@@ -2018,10 +2025,13 @@
     // 预测经期（仅一个月）
     var predicted = getPredictedPeriodDates(year, month);
 
-    // 排卵日集合（所有经期记录推算出的排卵日）
+    // 排卵日集合（所有经期记录推算出的排卵日，基于实际下一条经期修正）
     var ovulationDays = {};
-    state.periods.forEach(function(p){
-      var ovDay = getOvulationDate(p);
+    var sortedPeriods = state.periods.slice().sort();
+    sortedPeriods.forEach(function(p, idx){
+      var actualNext = (idx + 1 < sortedPeriods.length) ? sortedPeriods[idx+1] : null;
+      var nextPeriod = actualNext || getNextPeriodDate(p);
+      var ovDay = addDays(nextPeriod, -14);
       ovulationDays[ovDay] = true;
     });
 
