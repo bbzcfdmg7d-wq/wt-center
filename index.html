@@ -886,7 +886,6 @@
     z-index:10;
     display:none;
   }
-  .trend-tooltip .tt-head{font-weight:600;color:var(--text);margin-bottom:2px;}
   .trend-tooltip .tt-row{display:flex;align-items:center;gap:6px;color:var(--text-light);}
   .trend-tooltip .tt-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
   .trend-tooltip .tt-val{font-weight:600;color:var(--text);}
@@ -2495,11 +2494,8 @@
         return;
       }
 
-      // tooltip 内容
-      var dateParts = best.date.split('-');
-      var dateStr = parseInt(dateParts[1],10) + '月' + parseInt(dateParts[2],10) + '日';
-      var html = '<div class="tt-head">' + dateStr + '（周期第' + (best.day + 1) + '天）</div>';
-      html += '<div class="tt-row"><span class="tt-dot" style="background:' + best.color + '"></span>' + best.label + ' <span class="tt-val">' + best.weight.toFixed(1) + ' 斤</span></div>';
+      // tooltip 内容（精简：只显示周期与体重）
+      var html = '<div class="tt-row"><span class="tt-dot" style="background:' + best.color + '"></span>' + best.label + ' <span class="tt-val">' + best.weight.toFixed(1) + ' 斤</span></div>';
       tooltip.innerHTML = html;
 
       // 定位（相对于 card，用 canvas 在 card 内的偏移）
