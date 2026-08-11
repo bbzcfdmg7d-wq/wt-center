@@ -1690,14 +1690,9 @@
       var cloudPeriods = data.periods || [];
       // 云端 periods 兼容迁移：检测旧版"开始日"并展开
       cloudPeriods = migratePeriodsIfNeeded(cloudPeriods);
-      // periods 以云端为准覆盖本地（防止本地迁移 bug 污染云端）
-      // 仅当云端有数据时才覆盖；云端无数据时保留本地
-      var mergedPeriods;
-      if(cloudPeriods.length > 0){
-        mergedPeriods = cloudPeriods;
-      } else {
-        mergedPeriods = loadPeriods();
-      }
+      // periods 取并集（本地新增 + 云端已有），loadPeriods 的连续检测 + savePeriods 安全阀防止膨胀
+      var localPeriods = loadPeriods();
+      var mergedPeriods = mergePeriods(localPeriods, cloudPeriods);
       var mergedGoal = data.goal;
       // 本地 goal 优先（如果有）
       var localGoal = loadGoal();
