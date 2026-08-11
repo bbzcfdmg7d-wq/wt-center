@@ -1517,23 +1517,28 @@
       if(!raw) return [];
       var arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return [];
-      // 兼容迁移：旧版 periods 存的是"经期开始日"，每个展开为连续 7 天出血日
-      // 新版 periods 存的是"出血日"（每天独立标记）
-      // 通过检测是否存在 PERIOD_MIGRATED 标记判断是否已迁移
+      // 兼容迁移：旧版 periods 存的是"经期开始日"，新版存的是"出血日"
+      // 安全迁移：检测是否已有连续日期（间隔≤2天），有则说明已是新版，不展开
       var migrated = localStorage.getItem(PERIOD_KEY + '_migrated');
       if(!migrated){
-        var expanded = {};
-        arr.forEach(function(start){
-          // 仅当该日期看起来是"开始日"（即其后 6 天都不在原数组里）才展开
-          // 简单策略：如果数组里没有连续日期，就认为是旧版开始日，展开 7 天
-          for(var i = 0; i < PERIOD_DAYS; i++){
-            expanded[addDays(start, i)] = true;
-          }
-        });
-        var newArr = Object.keys(expanded).sort();
-        localStorage.setItem(PERIOD_KEY, JSON.stringify(newArr));
+        // 检测是否已是新版（有连续日期）
+        var hasConsecutive = false;
+        var sorted = arr.slice().sort();
+        for(var i = 1; i < sorted.length; i++){
+          if(daysBetween(sorted[i-1], sorted[i]) <= 2){ hasConsecutive = true; break; }
+        }
+        if(!hasConsecutive && sorted.length > 0){
+          // 旧版开始日：每个展开 7 天
+          var expanded = {};
+          sorted.forEach(function(start){
+            for(var j = 0; j < PERIOD_DAYS; j++){
+              expanded[addDays(start, j)] = true;
+            }
+          });
+          arr = Object.keys(expanded).sort();
+          localStorage.setItem(PERIOD_KEY, JSON.stringify(arr));
+        }
         localStorage.setItem(PERIOD_KEY + '_migrated', '1');
-        return newArr;
       }
       return arr.sort();
     }catch(e){ return []; }
