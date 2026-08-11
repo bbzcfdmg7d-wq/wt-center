@@ -403,6 +403,54 @@
     margin-top:10px;
     text-align:center;
   }
+  /* 经期段分组显示 */
+  .period-segment{
+    background:var(--pink-bg);
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  .period-seg-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:6px;
+  }
+  .period-seg-date{
+    font-size:13px;
+    font-weight:600;
+    color:var(--pink-text);
+  }
+  .period-seg-count{
+    font-size:11px;
+    color:var(--text-light);
+    background:rgba(255,255,255,0.6);
+    padding:2px 8px;
+    border-radius:8px;
+  }
+  .period-seg-days{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+  }
+  .period-day-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:2px;
+    font-size:11px;
+    color:var(--pink-text);
+    background:rgba(255,255,255,0.7);
+    padding:3px 7px;
+    border-radius:6px;
+    line-height:1.4;
+  }
+  .period-day-chip em{
+    font-style:normal;
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:13px;
+    padding:0 1px;
+  }
+  .period-day-chip em:active{color:#e0938a;}
   .period-predict{
     display:flex;
     flex-wrap:wrap;
@@ -547,6 +595,29 @@
   /* 预测经期的日期数字颜色（粉色） */
   .cal-day.predicted-period .day-num{
     color:var(--pink-dash);
+  }
+  /* 出血日：粉色实心圆点标记 */
+  .cal-day.bleeding-day{
+    position:relative;
+  }
+  .cal-day.bleeding-day::after{
+    content:'';
+    position:absolute;
+    bottom:3px;
+    left:50%;
+    transform:translateX(-50%);
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background:var(--pink-text);
+  }
+  /* 日历格子可点击提示 */
+  .cal-day[data-date]{
+    cursor:pointer;
+    -webkit-tap-highlight-color:rgba(244,205,217,0.3);
+  }
+  .cal-day[data-date]:active{
+    opacity:0.7;
   }
   /* 日历格内布局：3行 */
   .cal-day .row-top{
@@ -1288,14 +1359,15 @@
   <!-- 页面3：经期 -->
   <div class="page" id="page-period">
     <div class="section">
-      <div class="section-title"><span class="dot" style="background:var(--pink)"></span> 经期日期管理</div>
+      <div class="section-title"><span class="dot" style="background:var(--pink)"></span> 经期出血日管理</div>
       <div class="period-card">
         <div class="period-input-block">
-          <label class="period-date-label">经期开始日期</label>
+          <label class="period-date-label">添加出血日（每天单独标记）</label>
           <div class="period-input-row">
             <input type="date" id="periodDateInput" class="period-date-input">
             <button class="period-add-btn" id="periodAddBtn">添加</button>
           </div>
+          <div class="phase-hint" style="margin-top:6px;font-size:11px;">经期天数不固定，哪天出血就添加哪天；可连续添加多天</div>
         </div>
         <div class="period-list" id="periodList"></div>
       </div>
@@ -1454,6 +1526,24 @@
       if(!raw) return [];
       var arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return [];
+      // 兼容迁移：旧版 periods 存的是"经期开始日"，每个展开为连续 7 天出血日
+      // 新版 periods 存的是"出血日"（每天独立标记）
+      // 通过检测是否存在 PERIOD_MIGRATED 标记判断是否已迁移
+      var migrated = localStorage.getItem(PERIOD_KEY + '_migrated');
+      if(!migrated){
+        var expanded = {};
+        arr.forEach(function(start){
+          // 仅当该日期看起来是"开始日"（即其后 6 天都不在原数组里）才展开
+          // 简单策略：如果数组里没有连续日期，就认为是旧版开始日，展开 7 天
+          for(var i = 0; i < PERIOD_DAYS; i++){
+            expanded[addDays(start, i)] = true;
+          }
+        });
+        var newArr = Object.keys(expanded).sort();
+        localStorage.setItem(PERIOD_KEY, JSON.stringify(newArr));
+        localStorage.setItem(PERIOD_KEY + '_migrated', '1');
+        return newArr;
+      }
       return arr.sort();
     }catch(e){ return []; }
   }
@@ -1493,6 +1583,27 @@
     local.forEach(function(d){ set[d] = true; });
     cloud.forEach(function(d){ set[d] = true; });
     return Object.keys(set).sort();
+  }
+
+  // 云端 periods 迁移：检测旧版"开始日"并展开为 7 天出血日
+  // 判断依据：所有日期彼此间隔 > 7 天（说明是孤立开始日，非连续出血日）
+  function migratePeriodsIfNeeded(arr){
+    if(!arr || arr.length === 0) return [];
+    var sorted = arr.slice().sort();
+    // 检测是否有连续日期（间隔 ≤ 2 天），有则视为已是新版
+    var hasConsecutive = false;
+    for(var i = 1; i < sorted.length; i++){
+      if(daysBetween(sorted[i-1], sorted[i]) <= 2){ hasConsecutive = true; break; }
+    }
+    if(hasConsecutive) return sorted; // 已是新版出血日
+    // 旧版开始日：每个展开 7 天
+    var expanded = {};
+    sorted.forEach(function(start){
+      for(var i = 0; i < PERIOD_DAYS; i++){
+        expanded[addDays(start, i)] = true;
+      }
+    });
+    return Object.keys(expanded).sort();
   }
 
   // 收集所有数据为一个对象
@@ -1575,6 +1686,8 @@
       var merged = mergeRecords(localRecords, cloudRecords);
       var localPeriods = loadPeriods();
       var cloudPeriods = data.periods || [];
+      // 云端 periods 兼容迁移：检测是否为旧版"开始日"（全是孤立日期，间隔>7天）
+      cloudPeriods = migratePeriodsIfNeeded(cloudPeriods);
       var mergedPeriods = mergePeriods(localPeriods, cloudPeriods);
       var mergedGoal = data.goal;
       // 本地 goal 优先（如果有）
@@ -1638,6 +1751,32 @@
   var CYCLE_LENGTH = 30;
   var PERIOD_DAYS = 7;
 
+  // 把出血日列表归并成"经期段"：连续日期（间隔≤1天）合并为一段
+  // 返回 [{start, end, days: [...]}, ...] 按日期升序
+  function getPeriodSegments(){
+    var days = state.periods.slice().sort();
+    if(days.length === 0) return [];
+    var segments = [];
+    var cur = { start: days[0], end: days[0], days: [days[0]] };
+    for(var i = 1; i < days.length; i++){
+      // 间隔 ≤ 2 天视为同一段（容许短暂中断）
+      if(daysBetween(days[i-1], days[i]) <= 2){
+        cur.end = days[i];
+        cur.days.push(days[i]);
+      } else {
+        segments.push(cur);
+        cur = { start: days[i], end: days[i], days: [days[i]] };
+      }
+    }
+    segments.push(cur);
+    return segments;
+  }
+
+  // 判断某日期是否为出血日
+  function isBleedingDay(dateStr){
+    return state.periods.indexOf(dateStr) !== -1;
+  }
+
   function getNextPeriodDate(lastPeriodDate){
     return addDays(lastPeriodDate, CYCLE_LENGTH);
   }
@@ -1646,46 +1785,51 @@
   }
 
   function getPhaseForDate(dateStr){
-    var periods = state.periods.slice().sort();
-    if(periods.length === 0) return 'none';
+    var days = state.periods.slice().sort();
+    if(days.length === 0) return 'none';
 
-    var basePeriod = null;
-    var nextPeriod = null;
-    for(var i=0;i<periods.length;i++){
-      if(periods[i] <= dateStr){
-        basePeriod = periods[i];
-        nextPeriod = (i+1 < periods.length) ? periods[i+1] : null;
+    // 出血日直接判定为经期
+    if(isBleedingDay(dateStr)) return 'period';
+
+    var segments = getPeriodSegments();
+    // 找 dateStr 所在的周期段：dateStr 在某段经期之后、下一段经期之前
+    var baseSeg = null;
+    var nextSeg = null;
+    for(var i = 0; i < segments.length; i++){
+      if(segments[i].start <= dateStr){
+        baseSeg = segments[i];
+        nextSeg = (i + 1 < segments.length) ? segments[i+1] : null;
       }
     }
-    if(!basePeriod) return 'none';
+    if(!baseSeg) return 'none';
 
-    // 日期已进入下一条实际经期之后，用下一条经期作为基准重新计算
-    if(nextPeriod && daysBetween(nextPeriod, dateStr) >= 0){
-      // 递归找 nextPeriod 之后的实际经期
+    // 日期已进入下一段经期之后，用下一段作为基准
+    if(nextSeg && daysBetween(nextSeg.start, dateStr) >= 0){
       var nextNext = null;
-      for(var j=0;j<periods.length;j++){
-        if(periods[j] > nextPeriod){ nextNext = periods[j]; break; }
+      for(var j = 0; j < segments.length; j++){
+        if(segments[j].start > nextSeg.start){ nextNext = segments[j]; break; }
       }
-      return getPhaseForDateInner(nextPeriod, dateStr, nextNext);
+      return getPhaseForDateInner(nextSeg, dateStr, nextNext);
     }
-    // 日期在 basePeriod 周期内：把实际下一条经期传入，修正排卵日和黄体期
-    return getPhaseForDateInner(basePeriod, dateStr, nextPeriod);
+    // 日期在 baseSeg 周期内：把实际下一段经期传入，修正排卵日和黄体期
+    return getPhaseForDateInner(baseSeg, dateStr, nextSeg);
   }
 
-  // 传入实际的下一条经期（可选），用于修正排卵日和黄体期
-  function getPhaseForDateInner(lastPeriodDate, dateStr, actualNextPeriod){
-    var dayOffset = daysBetween(lastPeriodDate, dateStr);
-    if(dayOffset <= PERIOD_DAYS - 1) return 'period';
+  // 传入实际的下一条经期段（可选），用于修正排卵日和黄体期
+  // seg = {start, end, days}
+  function getPhaseForDateInner(seg, dateStr, actualNextSeg){
+    // 经期段内（含出血日及段内间隔日）算经期
+    if(dateStr >= seg.start && dateStr <= seg.end) return 'period';
 
-    // 优先用实际下一条经期，没有才用 30 天预测
-    var nextPeriod = actualNextPeriod || getNextPeriodDate(lastPeriodDate);
-    // 排卵日 = 下一次经期前 14 天（黄体期固定 14 天）
-    var ovulationDay = addDays(nextPeriod, -14);
+    // 优先用实际下一段经期，没有才用 30 天预测
+    var nextPeriodStart = actualNextSeg ? actualNextSeg.start : getNextPeriodDate(seg.start);
+    // 排卵日 = 下一次经期开始前 14 天
+    var ovulationDay = addDays(nextPeriodStart, -14);
     var ovulationStart = addDays(ovulationDay, -5);
     var ovulationEnd = addDays(ovulationDay, 1);
-    // 黄体期：实际/预测经期的前 7 天
-    var lutealStart = addDays(nextPeriod, -7);
-    var lutealEnd = addDays(nextPeriod, -1);
+    // 黄体期：实际/预测经期开始的前 7 天
+    var lutealStart = addDays(nextPeriodStart, -7);
+    var lutealEnd = addDays(nextPeriodStart, -1);
 
     if(dateStr === ovulationDay) return 'ovulation';
     if(dateStr >= ovulationStart && dateStr <= ovulationEnd) return 'ovulation';
@@ -1694,23 +1838,23 @@
   }
 
   function getCycleDay(dateStr){
-    var periods = state.periods.slice().sort();
-    if(periods.length === 0) return null;
-    var basePeriod = null;
-    for(var i=0;i<periods.length;i++){
-      if(periods[i] <= dateStr) basePeriod = periods[i];
+    var segments = getPeriodSegments();
+    if(segments.length === 0) return null;
+    var baseSeg = null;
+    for(var i=0;i<segments.length;i++){
+      if(segments[i].start <= dateStr) baseSeg = segments[i];
     }
-    if(!basePeriod) return null;
-    return daysBetween(basePeriod, dateStr) + 1;
+    if(!baseSeg) return null;
+    return daysBetween(baseSeg.start, dateStr) + 1;
   }
 
-  // 计算下一次经期开始的预测日期（基于最近一次经期）
+  // 计算下一次经期开始的预测日期（基于最近一次经期段）
   function getPredictedNextPeriodDate(){
-    var periods = state.periods.slice().sort();
-    if(periods.length === 0) return null;
-    var last = periods[periods.length - 1];
-    // 如果最近经期已开始超过一定天数，按预估下次来潮；否则就用最近这次+周期
-    return addDays(last, CYCLE_LENGTH);
+    var segments = getPeriodSegments();
+    if(segments.length === 0) return null;
+    var last = segments[segments.length - 1];
+    // 基于最近一段经期的开始日 + 周期
+    return addDays(last.start, CYCLE_LENGTH);
   }
 
   // 获取预测经期所有日期（只预测一次：未来一个月的预测经期区间）
@@ -1800,32 +1944,47 @@
   function renderPeriodList(){
     var list = document.getElementById('periodList');
     if(state.periods.length === 0){
-      list.innerHTML = '';
+      list.innerHTML = '<div class="phase-hint" style="padding:12px 0;">还没有出血日记录，添加第一天出血日期开始追踪</div>';
       return;
     }
-    // 倒序排列：最新添加的在最上面
-    var sorted = state.periods.slice().sort().reverse();
+    // 按经期段分组显示（倒序，最新在上）
+    var segments = getPeriodSegments().slice().reverse();
     var html = '';
-    for(var i=0;i<sorted.length;i++){
-      var d = sorted[i];
-
-      html += '<div class="period-item">';
-      html += '<div class="period-item-info">';
-      html += '<span>'+d+'</span>';
+    for(var i = 0; i < segments.length; i++){
+      var seg = segments[i];
+      var dayCount = seg.days.length;
+      var label = seg.start;
+      if(seg.start !== seg.end){
+        label = seg.start + ' ~ ' + seg.end;
+      }
+      html += '<div class="period-segment">';
+      html += '<div class="period-seg-header">';
+      html += '<span class="period-seg-date">' + label + '</span>';
+      html += '<span class="period-seg-count">' + dayCount + '天</span>';
       html += '</div>';
-      html += '<button class="period-delete" data-date="'+d+'">×</button>';
+      // 段内每天的小标签（可单独删除）
+      html += '<div class="period-seg-days">';
+      seg.days.forEach(function(dy){
+        var parts = dy.split('-');
+        var shortDate = parseInt(parts[1],10) + '/' + parseInt(parts[2],10);
+        html += '<span class="period-day-chip" data-date="' + dy + '">' + shortDate + ' <em>×</em></span>';
+      });
+      html += '</div>';
       html += '</div>';
     }
     list.innerHTML = html;
 
-    list.querySelectorAll('.period-delete').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var date = btn.dataset.date;
+    // 点击 chip 的 × 删除单个出血日
+    list.querySelectorAll('.period-day-chip em').forEach(function(em){
+      em.addEventListener('click', function(e){
+        e.stopPropagation();
+        var chip = em.closest('.period-day-chip');
+        var date = chip.dataset.date;
         state.periods = state.periods.filter(function(p){ return p !== date; });
         savePeriods(state.periods);
         renderPeriodList();
         renderAll();
-        showToast('已删除');
+        showToast('已删除 ' + date);
       });
     });
   }
@@ -2046,13 +2205,13 @@
     // 预测经期（仅一个月）
     var predicted = getPredictedPeriodDates(year, month);
 
-    // 排卵日集合（所有经期记录推算出的排卵日，基于实际下一条经期修正）
+    // 排卵日集合（基于经期段推算，用实际下一段经期修正）
     var ovulationDays = {};
-    var sortedPeriods = state.periods.slice().sort();
-    sortedPeriods.forEach(function(p, idx){
-      var actualNext = (idx + 1 < sortedPeriods.length) ? sortedPeriods[idx+1] : null;
-      var nextPeriod = actualNext || getNextPeriodDate(p);
-      var ovDay = addDays(nextPeriod, -14);
+    var segmentsForCal = getPeriodSegments();
+    segmentsForCal.forEach(function(seg, idx){
+      var actualNext = (idx + 1 < segmentsForCal.length) ? segmentsForCal[idx+1] : null;
+      var nextPeriodStart = actualNext ? actualNext.start : getNextPeriodDate(seg.start);
+      var ovDay = addDays(nextPeriodStart, -14);
       ovulationDays[ovDay] = true;
     });
 
@@ -2077,8 +2236,9 @@
       if(phase !== 'none') classes += ' phase-' + phase;
       if(predicted[dateStr] && !rec && phase !== 'period') classes += ' predicted-period';
       if(dateStr === today) classes += ' today';
+      if(isBleedingDay(dateStr)) classes += ' bleeding-day';
 
-      html += '<div class="'+classes+'">';
+      html += '<div class="'+classes+'" data-date="'+dateStr+'">';
 
       if(rec){
         // 第一行：日期 + 运动标记
@@ -2138,6 +2298,26 @@
       html += '</div>';
     }
     grid.innerHTML = html;
+
+    // 日历格子点击：切换出血日标记
+    grid.querySelectorAll('.cal-day[data-date]').forEach(function(cell){
+      cell.addEventListener('click', function(){
+        var date = cell.dataset.date;
+        var idx = state.periods.indexOf(date);
+        if(idx !== -1){
+          // 已是出血日 → 取消
+          state.periods.splice(idx, 1);
+          showToast('已取消 ' + date + ' 出血标记');
+        } else {
+          // 不是 → 添加出血日
+          state.periods.push(date);
+          showToast('已标记 ' + date + ' 为出血日');
+        }
+        savePeriods(state.periods);
+        renderPeriodList();
+        renderAll();
+      });
+    });
   }
 
   document.getElementById('calPrevBtn').addEventListener('click', function(){
@@ -2156,12 +2336,12 @@
   var trendHitPoints = []; // 数据点屏幕坐标缓存，供点击 tooltip 用
   var trendChartLayout = null; // 缓存画布布局参数
 
-  // 构建所有可用周期数据
+  // 构建所有可用周期数据（基于经期段，每段 start 作为周期起点）
   function buildTrendCycles(){
-    var periods = state.periods.slice().sort();
+    var segments = getPeriodSegments();
     var cycles = [];
-    for(var i = 0; i < periods.length; i++){
-      var start = periods[i];
+    for(var i = 0; i < segments.length; i++){
+      var start = segments[i].start;
       var end = addDays(start, CYCLE_LEN - 1);
       var points = [];
       for(var j = 0; j < state.records.length; j++){
