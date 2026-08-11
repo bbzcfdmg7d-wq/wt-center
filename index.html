@@ -1544,7 +1544,14 @@
     }catch(e){ return []; }
   }
   function savePeriods(periods){
-    localStorage.setItem(PERIOD_KEY, JSON.stringify(periods.slice().sort()));
+    // 安全阀：periods 异常多（>70天）说明可能被重复迁移污染，截断不推送
+    var safe = periods.slice().sort();
+    if(safe.length > 70){
+      console.warn('⚠️ periods 异常(' + safe.length + '条)，跳过推送防止污染云端');
+      localStorage.setItem(PERIOD_KEY, JSON.stringify(safe));
+      return;
+    }
+    localStorage.setItem(PERIOD_KEY, JSON.stringify(safe));
     pushToGitHub();
   }
 
@@ -1680,11 +1687,17 @@
       var localRecords = loadRecords();
       var cloudRecords = data.records || [];
       var merged = mergeRecords(localRecords, cloudRecords);
-      var localPeriods = loadPeriods();
       var cloudPeriods = data.periods || [];
-      // 云端 periods 兼容迁移：检测是否为旧版"开始日"（全是孤立日期，间隔>7天）
+      // 云端 periods 兼容迁移：检测旧版"开始日"并展开
       cloudPeriods = migratePeriodsIfNeeded(cloudPeriods);
-      var mergedPeriods = mergePeriods(localPeriods, cloudPeriods);
+      // periods 以云端为准覆盖本地（防止本地迁移 bug 污染云端）
+      // 仅当云端有数据时才覆盖；云端无数据时保留本地
+      var mergedPeriods;
+      if(cloudPeriods.length > 0){
+        mergedPeriods = cloudPeriods;
+      } else {
+        mergedPeriods = loadPeriods();
+      }
       var mergedGoal = data.goal;
       // 本地 goal 优先（如果有）
       var localGoal = loadGoal();
@@ -1697,8 +1710,8 @@
       console.log('✅ 已合并云端数据');
       if(statusEl){ statusEl.textContent = '✅ 数据已同步'; statusEl.className = 'sync-status success'; }
       if(callback) callback(true);
-      // 合并后推回云端
-      setTimeout(pushToGitHub, 500);
+      // 合并后推回云端（延迟更长，确保新版代码已加载）
+      setTimeout(pushToGitHub, 2000);
     }).catch(function(e){
       console.log('云端无数据或拉取失败:', e);
       if(statusEl){ statusEl.textContent = '☁️ 云端暂无数据，将自动同步'; statusEl.className = 'sync-status'; }
