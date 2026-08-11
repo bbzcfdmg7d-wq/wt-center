@@ -596,20 +596,9 @@
   .cal-day.predicted-period .day-num{
     color:var(--pink-dash);
   }
-  /* 出血日：粉色实心圆点标记 */
+  /* 出血日：用粉色背景区分（已有 phase-period 背景色），不需要额外圆点 */
   .cal-day.bleeding-day{
     position:relative;
-  }
-  .cal-day.bleeding-day::after{
-    content:'';
-    position:absolute;
-    bottom:3px;
-    left:50%;
-    transform:translateX(-50%);
-    width:5px;
-    height:5px;
-    border-radius:50%;
-    background:var(--pink-text);
   }
   /* 日历格子可点击提示 */
   .cal-day[data-date]{
@@ -667,6 +656,8 @@
     background:transparent;
     box-sizing:border-box;
   }
+  /* 出血日不显示排卵标记（出血日不会是排卵日，避免视觉混乱） */
+  .cal-day.bleeding-day .ovulation-mark{ display:none; }
   .cal-day.empty{
     background:transparent;
   }
