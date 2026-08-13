@@ -1089,7 +1089,7 @@
   }
   .measure-table{
     width:100%;
-    min-width:640px;
+    min-width:700px;
     border-collapse:collapse;
     font-size:13px;
   }
@@ -1386,6 +1386,7 @@
           <thead>
             <tr>
               <th class="sticky-col">日期</th>
+              <th>体重</th>
               <th>胸围</th>
               <th>腰围</th>
               <th>腹围</th>
@@ -2851,7 +2852,7 @@
     });
 
     if(sorted.length === 0){
-      tbody.innerHTML = '<tr><td colspan="8" class="empty-cell" style="padding:40px 20px;">还没有体围数据，开始录入第一条吧</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-cell" style="padding:40px 20px;">还没有体围数据，开始录入第一条吧</td></tr>';
       return;
     }
 
@@ -2865,9 +2866,11 @@
       if(parseInt(parts[0],10) !== thisYear){
         dateLabel = parts[0] + '/' + dateLabel;
       }
+      var hasWeight = typeof r.weight === 'number' && !isNaN(r.weight);
 
       html += '<tr>';
       html += '<td class="sticky-col">'+dateLabel+'</td>';
+      html += '<td'+(hasWeight?'':' class="empty-cell"')+'>'+(hasWeight ? r.weight.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.chest?'':' class="empty-cell"')+'>'+(m.chest ? m.chest.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.waist?'':' class="empty-cell"')+'>'+(m.waist ? m.waist.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.abdomen?'':' class="empty-cell"')+'>'+(m.abdomen ? m.abdomen.toFixed(1) : '—')+'</td>';
