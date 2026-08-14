@@ -2841,6 +2841,11 @@
   });
 
   // ====== 体围表格 ======
+  // 体围页专属体重覆盖表：仅在该表格显示，不影响其他页面（日历/统计/历史等）
+  var MEASURE_WEIGHT_OVERRIDE = {
+    '2023-05-01': 115.3,
+    '2023-12-17': 101.2
+  };
   function renderMeasureTable(){
     var tbody = document.getElementById('measureTableBody');
     // 只保留有体围记录的日期
@@ -2866,11 +2871,14 @@
       if(parseInt(parts[0],10) !== thisYear){
         dateLabel = parts[0] + '/' + dateLabel;
       }
-      var hasWeight = typeof r.weight === 'number' && !isNaN(r.weight);
+      // 体重：优先用覆盖表，其次用记录本身
+      var overrideW = MEASURE_WEIGHT_OVERRIDE[r.date];
+      var displayWeight = (typeof overrideW === 'number') ? overrideW : r.weight;
+      var hasWeight = typeof displayWeight === 'number' && !isNaN(displayWeight);
 
       html += '<tr>';
       html += '<td class="sticky-col">'+dateLabel+'</td>';
-      html += '<td'+(hasWeight?'':' class="empty-cell"')+'>'+(hasWeight ? r.weight.toFixed(1) : '—')+'</td>';
+      html += '<td'+(hasWeight?'':' class="empty-cell"')+'>'+(hasWeight ? displayWeight.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.chest?'':' class="empty-cell"')+'>'+(m.chest ? m.chest.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.waist?'':' class="empty-cell"')+'>'+(m.waist ? m.waist.toFixed(1) : '—')+'</td>';
       html += '<td'+(m.abdomen?'':' class="empty-cell"')+'>'+(m.abdomen ? m.abdomen.toFixed(1) : '—')+'</td>';
