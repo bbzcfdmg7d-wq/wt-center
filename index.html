@@ -633,6 +633,9 @@
   .cal-day .row-bot.down{color:#3a8a72;}
   .cal-day .row-bot.up{color:#c45a5a;}
   .cal-day .row-bot.flat{color:var(--text-dim);}
+  /* 本月最重/最轻体重加粗标注 */
+  .cal-day .row-mid.weight-max{ font-weight:800; color:#c45a5a; }
+  .cal-day .row-mid.weight-min{ font-weight:800; color:#3a8a72; }
   /* 运动标记：右上角 */
   .cal-day .sport-mark{
     position:absolute;
@@ -2220,6 +2223,48 @@
       ovulationDays[ovDay] = true;
     });
 
+    // ====== 本月周期最重/最轻体重标注 ======
+    // 以经期第一天为月起始：找出覆盖当前自然月的经期周期
+    // 周期范围 = [某经期段.start, 下一段经期段.start - 1]（无下一段则 +30天）
+    // 在该周期内找有体重记录的最重/最轻日期
+    var monthStart = year + '-' + String(month+1).padStart(2,'0') + '-01';
+    var daysInThisMonth = new Date(year, month+1, 0).getDate();
+    var monthEnd = year + '-' + String(month+1).padStart(2,'0') + '-' + String(daysInThisMonth).padStart(2,'0');
+
+    // 找覆盖本月的经期段：该段 start <= monthEnd，且 (下一段 start > monthStart 或 无下一段)
+    var cycleStart = null, cycleEnd = null;
+    for(var si = 0; si < segmentsForCal.length; si++){
+      var segStart = segmentsForCal[si].start;
+      var segNextStart = (si + 1 < segmentsForCal.length) ? segmentsForCal[si+1].start : addDays(segStart, CYCLE_LENGTH);
+      // 该段覆盖本月：segStart <= monthEnd 且 segNextStart > monthStart
+      if(segStart <= monthEnd && segNextStart > monthStart){
+        cycleStart = segStart;
+        cycleEnd = addDays(segNextStart, -1);
+        break;
+      }
+    }
+    // 如果没有经期段覆盖本月（如数据为空），则用自然月
+    if(!cycleStart){
+      cycleStart = monthStart;
+      cycleEnd = monthEnd;
+    }
+
+    // 收集该周期内有体重的记录，找最重/最轻
+    var cycleWeights = [];
+    sortedRecords.forEach(function(r){
+      if(typeof r.weight === 'number' && !isNaN(r.weight) && r.date >= cycleStart && r.date <= cycleEnd){
+        cycleWeights.push({ date: r.date, weight: r.weight });
+      }
+    });
+    var maxWeightDate = null, minWeightDate = null;
+    if(cycleWeights.length >= 2){
+      var maxW = -Infinity, minW = Infinity;
+      cycleWeights.forEach(function(cw){
+        if(cw.weight > maxW){ maxW = cw.weight; maxWeightDate = cw.date; }
+        if(cw.weight < minW){ minW = cw.weight; minWeightDate = cw.date; }
+      });
+    }
+
     var today = todayStr();
     var firstDay = new Date(year, month, 1);
     var startWeekday = firstDay.getDay();
@@ -2255,7 +2300,10 @@
         html += '</div>';
         // 第二行：体重（可选）
         if(typeof rec.weight === 'number' && !isNaN(rec.weight)){
-          html += '<div class="row-mid">'+rec.weight.toFixed(1)+' 斤</div>';
+          var weightCls = 'row-mid';
+          if(dateStr === maxWeightDate) weightCls += ' weight-max';
+          if(dateStr === minWeightDate) weightCls += ' weight-min';
+          html += '<div class="'+weightCls+'">'+rec.weight.toFixed(1)+' 斤</div>';
           // 第三行：变化值
           var prevRec = null;
           for(var s=sortedRecords.length-1;s>=0;s--){
