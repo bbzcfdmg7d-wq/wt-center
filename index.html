@@ -2379,6 +2379,12 @@
   var trendHitPoints = []; // 数据点屏幕坐标缓存，供点击 tooltip 用
   var trendChartLayout = null; // 缓存画布布局参数
 
+  // 周期标签：用「M/D」避免同月多段经期显示两个相同月份
+  function cycleLabel(startStr){
+    var parts = startStr.split('-');
+    return parseInt(parts[1],10) + '/' + parseInt(parts[2],10);
+  }
+
   // 构建所有可用周期数据（基于经期段，每段 start 作为周期起点）
   function buildTrendCycles(){
     var segments = getPeriodSegments();
@@ -2421,7 +2427,7 @@
     } else {
       // 显示前几个选中项
       var sel = allCycles.filter(function(c){ return trendSelected[c.start]; });
-      var labels = sel.map(function(c){ return parseInt(c.start.substring(5,7),10) + '月'; });
+      var labels = sel.map(function(c){ return cycleLabel(c.start); });
       var txt = labels.length <= 3 ? labels.join('、') : labels.slice(0,3).join('、') + ' 等';
       labelEl.textContent = '已选 ' + selectedCount + '/' + total + '：' + txt;
     }
@@ -2448,7 +2454,7 @@
       var c = cycles[i];
       var color = TREND_COLORS[i % TREND_COLORS.length];
       var checked = trendSelected[c.start];
-      var label = parseInt(c.start.substring(5,7),10) + '月'; // X月
+      var label = cycleLabel(c.start); // M/D
       var bgStyle = checked ? 'background:' + color + ';color:#fff;border-color:transparent;' : '';
       html += '<div class="trend-check-item ' + (checked ? 'checked' : '') + '" data-start="' + c.start + '" style="' + bgStyle + '">';
       html += label;
@@ -2620,7 +2626,7 @@
         if(allCycles[ai].start === c.start){ colorIdx = ai; break; }
       }
       var color = TREND_COLORS[colorIdx % TREND_COLORS.length];
-      var label = parseInt(c.start.substring(5,7),10) + '月';
+      var label = cycleLabel(c.start);
 
       // 折线
       ctx.strokeStyle = color;
@@ -2666,7 +2672,7 @@
         if(allCycles[ai2].start === cc.start){ colorIdx2 = ai2; break; }
       }
       var ccColor = TREND_COLORS[colorIdx2 % TREND_COLORS.length];
-      var ccLabel = parseInt(cc.start.substring(5,7),10) + '月';
+      var ccLabel = cycleLabel(cc.start);
       for(var pi3 = 0; pi3 < cc.points.length; pi3++){
         var hp = cc.points[pi3];
         trendHitPoints.push({
