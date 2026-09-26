@@ -636,6 +636,7 @@
   /* 本月最重/最轻体重加粗标注 */
   .cal-day .row-mid.weight-max{ font-weight:800; color:#c45a5a; }
   .cal-day .row-mid.weight-min{ font-weight:800; color:var(--blue-text); }
+  .cal-day .row-mid.weight-min-past{ font-weight:800; color:#3a8a72; }
   /* 运动标记：右上角 */
   .cal-day .sport-mark{
     position:absolute;
@@ -2243,11 +2244,14 @@
       }
     });
     var maxWeightDate = null, minWeightDate = null;
-    if(monthWeights.length >= 2){
-      var maxW = -Infinity, minW = Infinity;
+    var pastMinDates = {}; // 曾经最低（历史新低）的日期 → 永久绿色加粗，不再变化
+    if(monthWeights.length >= 1){
+      var maxW = -Infinity, minW = Infinity, runningMin = Infinity;
       monthWeights.forEach(function(cw){
         if(cw.weight >= maxW){ maxW = cw.weight; maxWeightDate = cw.date; }
         if(cw.weight <= minW){ minW = cw.weight; minWeightDate = cw.date; }
+        // 依次出现的更低体重 = 历史新低，永久标记
+        if(cw.weight < runningMin){ runningMin = cw.weight; pastMinDates[cw.date] = true; }
       });
     }
 
@@ -2288,7 +2292,11 @@
         if(typeof rec.weight === 'number' && !isNaN(rec.weight)){
           var weightCls = 'row-mid';
           if(dateStr === maxWeightDate) weightCls += ' weight-max';
-          if(dateStr === minWeightDate) weightCls += ' weight-min';
+          if(dateStr === minWeightDate){
+            weightCls += ' weight-min'; // 当前最低：蓝色
+          } else if(pastMinDates[dateStr]){
+            weightCls += ' weight-min-past'; // 曾经最低（历史新低）：绿色，永久保留
+          }
           html += '<div class="'+weightCls+'">'+rec.weight.toFixed(1)+' 斤</div>';
           // 第三行：变化值
           var prevRec = null;
