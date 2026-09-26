@@ -2229,42 +2229,27 @@
     });
 
     // ====== 本月最重/最轻体重标注 ======
-    // 以经期第一天为月起始，但只标注当前日历可见格子（自然月范围）
-    // 周期起始 = 本月内第一个经期段.start（或自然月1日）
+    // 按自然月全月（monthStart ~ monthEnd）比较：不用经期日开始过滤，
+    // 否则补记在经期开始日之前的更低/更高体重不参与比较，旧标注不还原
     var daysInThisMonth = new Date(year, month+1, 0).getDate();
     var monthStart = year + '-' + String(month+1).padStart(2,'0') + '-01';
     var monthEnd = year + '-' + String(month+1).padStart(2,'0') + '-' + String(daysInThisMonth).padStart(2,'0');
 
-    // 在当月内找第一个经期段作为"月经月"起始；没有就用自然月1日
-    var cycleStart = monthStart;
-    for(var si = 0; si < segmentsForCal.length; si++){
-      if(segmentsForCal[si].start >= monthStart && segmentsForCal[si].start <= monthEnd){
-        cycleStart = segmentsForCal[si].start;
-        break;
-      }
-    }
-
-    // 收集当月（cycleStart ~ monthEnd）内有体重的记录，找最重
-    var cycleWeights = [];
+    // 收集当月全月有体重的记录，找最重/最轻（平局取日期最新的）
+    var monthWeights = [];
     sortedRecords.forEach(function(r){
-      if(typeof r.weight === 'number' && !isNaN(r.weight) && r.date >= cycleStart && r.date <= monthEnd){
-        cycleWeights.push({ date: r.date, weight: r.weight });
+      if(typeof r.weight === 'number' && !isNaN(r.weight) && r.date >= monthStart && r.date <= monthEnd){
+        monthWeights.push({ date: r.date, weight: r.weight });
       }
     });
     var maxWeightDate = null, minWeightDate = null;
-    if(cycleWeights.length >= 2){
-      var maxW = -Infinity;
-      cycleWeights.forEach(function(cw){
-        if(cw.weight > maxW){ maxW = cw.weight; maxWeightDate = cw.date; }
+    if(monthWeights.length >= 2){
+      var maxW = -Infinity, minW = Infinity;
+      monthWeights.forEach(function(cw){
+        if(cw.weight >= maxW){ maxW = cw.weight; maxWeightDate = cw.date; }
+        if(cw.weight <= minW){ minW = cw.weight; minWeightDate = cw.date; }
       });
     }
-    // 最轻：全局最低（跨所有月份，平局取最新日期）。出现更低体重时旧标注自动还原，仅当前最低标蓝
-    var minW = Infinity;
-    sortedRecords.forEach(function(r){
-      if(typeof r.weight === 'number' && !isNaN(r.weight)){
-        if(r.weight <= minW){ minW = r.weight; minWeightDate = r.date; }
-      }
-    });
 
     var today = todayStr();
     var firstDay = new Date(year, month, 1);
