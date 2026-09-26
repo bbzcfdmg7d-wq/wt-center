@@ -634,9 +634,10 @@
   .cal-day .row-bot.up{color:#c45a5a;}
   .cal-day .row-bot.flat{color:var(--text-dim);}
   /* 本月最重/最轻体重加粗标注 */
-  .cal-day .row-mid.weight-max{ font-weight:800; color:#c45a5a; }
-  .cal-day .row-mid.weight-min{ font-weight:800; color:var(--blue-text); }
+  /* 本月最重/最轻标注：同一天多重身份时优先级 红(最重) > 蓝(当前最低) > 绿(历史新低) */
   .cal-day .row-mid.weight-min-past{ font-weight:800; color:#3a8a72; }
+  .cal-day .row-mid.weight-min{ font-weight:800; color:var(--blue-text); }
+  .cal-day .row-mid.weight-max{ font-weight:800; color:#c45a5a; }
   /* 运动标记：右上角 */
   .cal-day .sport-mark{
     position:absolute;
