@@ -2230,52 +2230,62 @@
       ovulationDays[ovDay] = true;
     });
 
-    // ====== 本月最重/最轻体重标注 ======
-    // 范围：本月经期第一天 ~ 下月经期前一天（没有经期数据时退回自然月）
-    var daysInThisMonth = new Date(year, month+1, 0).getDate();
+    // ====== 本月最重/最轻体重标注（按经期周期分组） ======
+    // 每个周期 = 本段经期第一天 ~ 下段经期前一天。
+    // 当月日历中跨周期的部分（如 9 月里的 9/27~9/30 属于下一周期）各自按所属周期计算。
     var monthStart = year + '-' + String(month+1).padStart(2,'0') + '-01';
-    var monthEnd = year + '-' + String(month+1).padStart(2,'0') + '-' + String(daysInThisMonth).padStart(2,'0');
+    var monthEnd = year + '-' + String(month+1).padStart(2,'0') + '-' + String(new Date(year, month+1, 0).getDate()).padStart(2,'0');
 
-    // 找覆盖当月的经期段：选择"与本月重叠天数最多"的那段作为周期基准。
-    // 这样 9 月（8/31~9/26 覆盖 26 天 > 9/27~9/30 覆盖 4 天）会正确用 8/31 段
-    var cycleStart = monthStart, cycleEnd = monthEnd;
-    var coverIdx = -1, coverDays = 0;
-    for(var si = 0; si < segmentsForCal.length; si++){
-      var segStart = segmentsForCal[si].start;
-      var segEnd = (si + 1 < segmentsForCal.length) ? addDays(segmentsForCal[si+1].start, -1) : null;
-      // 与当月的重叠区间
-      var ovStart = segStart > monthStart ? segStart : monthStart;
-      var ovEnd = (segEnd && segEnd < monthEnd) ? segEnd : monthEnd;
-      if(ovStart > ovEnd) continue;
-      var ovDays = Math.round((new Date(ovEnd+'T00:00:00') - new Date(ovStart+'T00:00:00')) / 86400000) + 1;
-      if(ovDays > coverDays){ coverDays = ovDays; coverIdx = si; }
+    // 构造周期列表：[{start, end}]
+    var cycleRanges = [];
+    for(var ci = 0; ci < segmentsForCal.length; ci++){
+      var cStart = segmentsForCal[ci].start;
+      var cEnd = (ci + 1 < segmentsForCal.length) ? addDays(segmentsForCal[ci+1].start, -1) : null;
+      cycleRanges.push({ start: cStart, end: cEnd });
     }
-    if(coverIdx >= 0 && segmentsForCal[coverIdx]){
-      cycleStart = segmentsForCal[coverIdx].start;
-      // 周期终点 = 下一段经期开始的前一天
-      if(coverIdx + 1 < segmentsForCal.length){
-        cycleEnd = addDays(segmentsForCal[coverIdx+1].start, -1);
+    // 返回某日期所属周期的索引（end 为 null 表示最后一段，延伸到无限）
+    function cycleIndexOf(dateStr){
+      for(var k = cycleRanges.length - 1; k >= 0; k--){
+        if(dateStr >= cycleRanges[k].start && (cycleRanges[k].end === null || dateStr <= cycleRanges[k].end)){
+          return k;
+        }
       }
+      return -1;
     }
 
-    // 收集本周期（cycleStart ~ cycleEnd）内有体重的记录，找最重/最轻
-    // 注意：范围可能跨月，比较时用完整周期，避免补记体重不参与比较
-    var monthWeights = [];
-    sortedRecords.forEach(function(r){
-      if(typeof r.weight === 'number' && !isNaN(r.weight) && r.date >= cycleStart && r.date <= cycleEnd){
-        monthWeights.push({ date: r.date, weight: r.weight });
-      }
-    });
+    // 为每个周期计算标注：maxWeightDate / minWeightDate / pastMinDates
+    // 标签仅在"当月可见格子"内渲染，同一周期可能横跨两个月
     var maxWeightDate = null, minWeightDate = null;
-    var pastMinDates = {}; // 曾经最低（历史新低）的日期 → 永久绿色加粗，不再变化
-    if(monthWeights.length >= 1){
-      var maxW = -Infinity, minW = Infinity, runningMin = Infinity;
-      monthWeights.forEach(function(cw){
-        if(cw.weight >= maxW){ maxW = cw.weight; maxWeightDate = cw.date; }
-        if(cw.weight <= minW){ minW = cw.weight; minWeightDate = cw.date; }
-        // 依次出现的更低体重 = 历史新低，永久标记
+    var pastMinDates = {};
+    // 只处理与当月有交集的周期
+    var cycleCache = {};
+    cycleRanges.forEach(function(cr, idx){
+      var ovStart = cr.start > monthStart ? cr.start : monthStart;
+      var ovEnd = (cr.end && cr.end < monthEnd) ? cr.end : monthEnd;
+      if(ovStart > ovEnd) return; // 与当月无交集
+      // 该周期内的全部体重记录（可能跨月）
+      var inCycle = [];
+      sortedRecords.forEach(function(r){
+        if(typeof r.weight === 'number' && !isNaN(r.weight) && r.date >= cr.start && (cr.end === null || r.date <= cr.end)){
+          inCycle.push({ date: r.date, weight: r.weight });
+        }
+      });
+      if(inCycle.length < 1) return;
+      var cMaxDate = null, cMinDate = null, runningMin = Infinity;
+      var cMax = -Infinity, cMin = Infinity;
+      inCycle.forEach(function(cw){
+        if(cw.weight >= cMax){ cMax = cw.weight; cMaxDate = cw.date; }
+        if(cw.weight <= cMin){ cMin = cw.weight; cMinDate = cw.date; }
         if(cw.weight < runningMin){ runningMin = cw.weight; pastMinDates[cw.date] = true; }
       });
+      cycleCache[idx] = { maxDate: cMaxDate, minDate: cMinDate };
+    });
+
+    // 渲染时用：给某日期查它所属周期的最重/最低
+    function weightRoleOf(dateStr){
+      var idx = cycleIndexOf(dateStr);
+      if(idx < 0 || !cycleCache[idx]) return null;
+      return { maxDate: cycleCache[idx].maxDate, minDate: cycleCache[idx].minDate };
     }
 
     var today = todayStr();
@@ -2314,9 +2324,14 @@
         // 第二行：体重（可选）
         if(typeof rec.weight === 'number' && !isNaN(rec.weight)){
           var weightCls = 'row-mid';
-          if(dateStr === maxWeightDate) weightCls += ' weight-max';
-          if(dateStr === minWeightDate){
-            weightCls += ' weight-min'; // 当前最低：蓝色
+          // 该日期所属周期的最重/最低（支持当月跨两个周期）
+          var role = weightRoleOf(dateStr);
+          var isMax = role && (dateStr === role.maxDate);
+          var isMin = role && (dateStr === role.minDate);
+          if(isMax){
+            weightCls += ' weight-max'; // 本周期最重：红色（优先级最高）
+          } else if(isMin){
+            weightCls += ' weight-min'; // 本周期当前最低：蓝色
           } else if(pastMinDates[dateStr]){
             weightCls += ' weight-min-past'; // 曾经最低（历史新低）：绿色，永久保留
           }
