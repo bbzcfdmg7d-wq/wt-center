@@ -634,9 +634,8 @@
   .cal-day .row-bot.up{color:#c45a5a;}
   .cal-day .row-bot.flat{color:var(--text-dim);}
   /* 本月最重/最轻体重加粗标注 */
-  /* 本月最重/最轻标注：同一周期内 最重(红) > 最低(蓝) */
-  .cal-day .row-mid.weight-min{ font-weight:800; color:var(--blue-text); }
-  .cal-day .row-mid.weight-max{ font-weight:800; color:#c45a5a; }
+  /* 每周期最低体重标注：绿色加粗（不再标注最重） */
+  .cal-day .row-mid.weight-min{ font-weight:800; color:#3a8a72; }
   /* 运动标记：右上角 */
   .cal-day .sport-mark{
     position:absolute;
@@ -2252,9 +2251,7 @@
       return -1;
     }
 
-    // 为每个周期计算标注：maxWeightDate / minWeightDate
-    // 每个周期只保留一个最低（当前最低，蓝色）；不再保留历史新低链
-    var maxWeightDate = null, minWeightDate = null;
+    // 为每个周期计算最低体重标注：每个周期只保留一个最低
     // 只处理与当月有交集的周期
     var cycleCache = {};
     cycleRanges.forEach(function(cr, idx){
@@ -2269,20 +2266,18 @@
         }
       });
       if(inCycle.length < 1) return;
-      var cMaxDate = null, cMinDate = null;
-      var cMax = -Infinity, cMin = Infinity;
+      var cMinDate = null, cMin = Infinity;
       inCycle.forEach(function(cw){
-        if(cw.weight >= cMax){ cMax = cw.weight; cMaxDate = cw.date; }
         if(cw.weight <= cMin){ cMin = cw.weight; cMinDate = cw.date; }
       });
-      cycleCache[idx] = { maxDate: cMaxDate, minDate: cMinDate };
+      cycleCache[idx] = { minDate: cMinDate };
     });
 
-    // 渲染时用：给某日期查它所属周期的最重/最低
+    // 渲染时用：给某日期查它所属周期的最底
     function weightRoleOf(dateStr){
       var idx = cycleIndexOf(dateStr);
       if(idx < 0 || !cycleCache[idx]) return null;
-      return { maxDate: cycleCache[idx].maxDate, minDate: cycleCache[idx].minDate };
+      return { minDate: cycleCache[idx].minDate };
     }
 
     var today = todayStr();
@@ -2323,12 +2318,8 @@
           var weightCls = 'row-mid';
           // 该日期所属周期的最重/最低（支持当月跨两个周期）
           var role = weightRoleOf(dateStr);
-          var isMax = role && (dateStr === role.maxDate);
-          var isMin = role && (dateStr === role.minDate);
-          if(isMax){
-            weightCls += ' weight-max'; // 本周期最重：红色（优先级最高）
-          } else if(isMin){
-            weightCls += ' weight-min'; // 本周期当前最低：蓝色
+          if(role && dateStr === role.minDate){
+            weightCls += ' weight-min'; // 本周期最低：绿色加粗
           }
           html += '<div class="'+weightCls+'">'+rec.weight.toFixed(1)+' 斤</div>';
           // 第三行：变化值
