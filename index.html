@@ -2231,16 +2231,29 @@
     });
 
     // ====== 本月最重/最轻体重标注 ======
-    // 按自然月全月（monthStart ~ monthEnd）比较：不用经期日开始过滤，
-    // 否则补记在经期开始日之前的更低/更高体重不参与比较，旧标注不还原
+    // 范围：本月经期第一天 ~ 下月经期前一天（没有经期数据时退回自然月）
     var daysInThisMonth = new Date(year, month+1, 0).getDate();
     var monthStart = year + '-' + String(month+1).padStart(2,'0') + '-01';
     var monthEnd = year + '-' + String(month+1).padStart(2,'0') + '-' + String(daysInThisMonth).padStart(2,'0');
 
-    // 收集当月全月有体重的记录，找最重/最轻（平局取日期最新的）
+    // 找覆盖当月的经期段：本月内第一个经期段作为周期起点；其下一段的前一天作为周期终点
+    var cycleStart = monthStart, cycleEnd = monthEnd;
+    for(var si = 0; si < segmentsForCal.length; si++){
+      if(segmentsForCal[si].start >= monthStart && segmentsForCal[si].start <= monthEnd){
+        cycleStart = segmentsForCal[si].start;
+        // 周期终点 = 下一段经期开始的前一天
+        if(si + 1 < segmentsForCal.length){
+          cycleEnd = addDays(segmentsForCal[si+1].start, -1);
+        }
+        break;
+      }
+    }
+
+    // 收集本周期（cycleStart ~ cycleEnd）内有体重的记录，找最重/最轻
+    // 注意：范围可能跨月，比较时用完整周期，避免补记体重不参与比较
     var monthWeights = [];
     sortedRecords.forEach(function(r){
-      if(typeof r.weight === 'number' && !isNaN(r.weight) && r.date >= monthStart && r.date <= monthEnd){
+      if(typeof r.weight === 'number' && !isNaN(r.weight) && r.date >= cycleStart && r.date <= cycleEnd){
         monthWeights.push({ date: r.date, weight: r.weight });
       }
     });
