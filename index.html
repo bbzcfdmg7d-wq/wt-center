@@ -2236,16 +2236,25 @@
     var monthStart = year + '-' + String(month+1).padStart(2,'0') + '-01';
     var monthEnd = year + '-' + String(month+1).padStart(2,'0') + '-' + String(daysInThisMonth).padStart(2,'0');
 
-    // 找覆盖当月的经期段：本月内第一个经期段作为周期起点；其下一段的前一天作为周期终点
+    // 找覆盖当月的经期段：选择"与本月重叠天数最多"的那段作为周期基准。
+    // 这样 9 月（8/31~9/26 覆盖 26 天 > 9/27~9/30 覆盖 4 天）会正确用 8/31 段
     var cycleStart = monthStart, cycleEnd = monthEnd;
+    var coverIdx = -1, coverDays = 0;
     for(var si = 0; si < segmentsForCal.length; si++){
-      if(segmentsForCal[si].start >= monthStart && segmentsForCal[si].start <= monthEnd){
-        cycleStart = segmentsForCal[si].start;
-        // 周期终点 = 下一段经期开始的前一天
-        if(si + 1 < segmentsForCal.length){
-          cycleEnd = addDays(segmentsForCal[si+1].start, -1);
-        }
-        break;
+      var segStart = segmentsForCal[si].start;
+      var segEnd = (si + 1 < segmentsForCal.length) ? addDays(segmentsForCal[si+1].start, -1) : null;
+      // 与当月的重叠区间
+      var ovStart = segStart > monthStart ? segStart : monthStart;
+      var ovEnd = (segEnd && segEnd < monthEnd) ? segEnd : monthEnd;
+      if(ovStart > ovEnd) continue;
+      var ovDays = Math.round((new Date(ovEnd+'T00:00:00') - new Date(ovStart+'T00:00:00')) / 86400000) + 1;
+      if(ovDays > coverDays){ coverDays = ovDays; coverIdx = si; }
+    }
+    if(coverIdx >= 0 && segmentsForCal[coverIdx]){
+      cycleStart = segmentsForCal[coverIdx].start;
+      // 周期终点 = 下一段经期开始的前一天
+      if(coverIdx + 1 < segmentsForCal.length){
+        cycleEnd = addDays(segmentsForCal[coverIdx+1].start, -1);
       }
     }
 
