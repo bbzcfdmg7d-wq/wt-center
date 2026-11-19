@@ -636,6 +636,21 @@
   /* 本月最重/最轻体重加粗标注 */
   /* 每周期最低体重标注：绿色加粗（不再标注最重） */
   .cal-day .row-mid.weight-min{ font-weight:800; color:#3a8a72; }
+  /* 每月减重列表 */
+  .cycle-loss-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 4px; border-bottom:1px solid var(--border);
+    font-size:14px;
+  }
+  .cycle-loss-row:last-child{ border-bottom:none; }
+  .cycle-loss-row .cl-cycle{ color:var(--text); font-weight:600; }
+  .cycle-loss-row .cl-cycle .cl-sub{ font-size:12px; color:var(--text-light); font-weight:400; margin-left:6px; }
+  .cycle-loss-row .cl-min{ color:#3a8a72; font-weight:800; }
+  .cycle-loss-row .cl-delta{ font-weight:800; }
+  .cycle-loss-row .cl-delta.loss{ color:#3a8a72; }
+  .cycle-loss-row .cl-delta.gain{ color:#c45a5a; }
+  .cycle-loss-row .cl-delta.flat{ color:var(--text-light); font-weight:400; }
+  .cycle-loss-row .cl-delta.first{ color:var(--text-light); font-weight:400; font-size:12px; }
   /* 运动标记：右上角 */
   .cal-day .sport-mark{
     position:absolute;
@@ -1356,6 +1371,14 @@
           <div class="trend-empty" id="allTrendEmpty" style="display:none;">至少需要2条体重记录才能绘制</div>
         </div>
       </div>
+      <!-- 每月减重：以每个周期最低体重为准，计算较上一周期减少量 -->
+      <div class="trend-section">
+        <div class="section-title" style="margin-top:20px;"><span class="dot" style="background:var(--green-text, #3a8a72)"></span> 每月减重（按周期最低体重）</div>
+        <div class="card trend-card" id="cycleLossCard">
+          <div id="cycleLossList"></div>
+          <div class="trend-empty" id="cycleLossEmpty" style="display:none;">至少需要2个有体重记录的周期才能计算</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1936,7 +1959,7 @@
       document.getElementById('pageTitle').textContent = info.title;
       document.getElementById('pageSubtitle').textContent = info.subtitle;
     }
-    if(pageName === 'calendar'){ renderCalendar(); renderTrendChart(); renderAllTrendChart(); }
+    if(pageName === 'calendar'){ renderCalendar(); renderTrendChart(); renderAllTrendChart(); renderCycleLoss(); }
     if(pageName === 'history') renderHistory();
     if(pageName === 'measure') renderMeasureTable();
     window.scrollTo(0, 0);
@@ -2871,6 +2894,86 @@
     }
   }
 
+  // ====== 每月减重：以每个周期最低体重为准，计算较上一周期的减少量 ======
+  function renderCycleLoss(){
+    var listEl = document.getElementById('cycleLossList');
+    var emptyEl = document.getElementById('cycleLossEmpty');
+    if(!listEl || !emptyEl) return;
+
+    var segments = getPeriodSegments();
+    var weightRecords = state.records.filter(function(r){ return typeof r.weight === 'number' && !isNaN(r.weight); });
+
+    if(segments.length === 0 || weightRecords.length === 0){
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    // 构造周期列表 [{start, end}]，与日历标注逻辑一致
+    var ranges = [];
+    for(var i = 0; i < segments.length; i++){
+      ranges.push({
+        start: segments[i].start,
+        end: (i + 1 < segments.length) ? addDays(segments[i+1].start, -1) : null
+      });
+    }
+
+    // 每个周期求最低体重（平局取日期最新的）
+    var cycleMins = [];
+    ranges.forEach(function(cr, idx){
+      var minW = Infinity, minDate = null;
+      weightRecords.forEach(function(r){
+        if(r.date >= cr.start && (cr.end === null || r.date <= cr.end)){
+          if(r.weight <= minW){ minW = r.weight; minDate = r.date; }
+        }
+      });
+      if(minDate !== null){
+        cycleMins.push({
+          idx: idx,
+          start: cr.start,
+          end: cr.end,
+          minWeight: minW,
+          minDate: minDate
+        });
+      }
+    });
+
+    if(cycleMins.length < 2){
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    emptyEl.style.display = 'none';
+    var html = '';
+    cycleMins.forEach(function(cm, i){
+      var label = cycleLabel(cm.start) + ' 周期';
+      var sub = cycleLabel(cm.start) + '~' + (cm.end ? cycleLabel(cm.end) : '至今');
+      var deltaHtml;
+      if(i === 0){
+        deltaHtml = '<span class="cl-delta first">首个周期</span>';
+      } else {
+        var prev = cycleMins[i-1];
+        var delta = cm.minWeight - prev.minWeight;
+        if(delta < -0.001){
+          deltaHtml = '<span class="cl-delta loss">↓ ' + Math.abs(delta).toFixed(1) + ' 斤</span>';
+        } else if(delta > 0.001){
+          deltaHtml = '<span class="cl-delta gain">↑ ' + delta.toFixed(1) + ' 斤</span>';
+        } else {
+          deltaHtml = '<span class="cl-delta flat">持平</span>';
+        }
+      }
+      html += '<div class="cycle-loss-row">'
+        + '<span class="cl-cycle">' + label + '<span class="cl-sub">' + sub + '</span></span>'
+        + '<span style="display:flex;align-items:baseline;gap:14px;">'
+        + '<span class="cl-min">' + cm.minWeight.toFixed(1) + ' 斤</span>'
+        + deltaHtml
+        + '</span>'
+        + '</div>';
+    });
+    listEl.innerHTML = html;
+  }
+
   // ====== 体重总趋势：点击/触摸显示具体数值 ======
   (function(){
     var canvas = document.getElementById('allTrendCanvas');
@@ -3181,6 +3284,7 @@
     renderHistory();
     renderMeasureTable();
     renderAllTrendChart();
+    renderCycleLoss();
   }
 
   // ====== 初始化 ======
@@ -3214,6 +3318,7 @@
       renderCalendar();
       renderTrendChart();
       renderAllTrendChart();
+      renderCycleLoss();
     }, 200);
   });
 
