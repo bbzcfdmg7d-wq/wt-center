@@ -2918,13 +2918,14 @@
       });
     }
 
-    // 每个周期求最低体重（平局取日期最新的）
+    // 每个周期求最低体重（平局取日期最新的），首个周期另记录最高体重（用于算周期内减重）
     var cycleMins = [];
     ranges.forEach(function(cr, idx){
-      var minW = Infinity, minDate = null;
+      var minW = Infinity, minDate = null, maxW = -Infinity;
       weightRecords.forEach(function(r){
         if(r.date >= cr.start && (cr.end === null || r.date <= cr.end)){
           if(r.weight <= minW){ minW = r.weight; minDate = r.date; }
+          if(r.weight > maxW){ maxW = r.weight; }
         }
       });
       if(minDate !== null){
@@ -2933,7 +2934,8 @@
           start: cr.start,
           end: cr.end,
           minWeight: minW,
-          minDate: minDate
+          minDate: minDate,
+          maxWeight: maxW
         });
       }
     });
@@ -2951,7 +2953,14 @@
       var sub = cycleLabel(cm.start) + '~' + (cm.end ? cycleLabel(cm.end) : '至今');
       var deltaHtml;
       if(i === 0){
-        deltaHtml = '<span class="cl-delta first">首个周期</span>';
+        // 仅首个周期：减重 = 周期内最重 - 周期内最轻
+        var innerLoss = cm.maxWeight - cm.minWeight;
+        if(innerLoss > 0.001){
+          deltaHtml = '<span class="cl-delta loss">↓ ' + innerLoss.toFixed(1) + ' 斤</span>'
+            + '<span class="cl-sub" style="font-size:12px;color:var(--text-light);">周期内</span>';
+        } else {
+          deltaHtml = '<span class="cl-delta first">首个周期</span>';
+        }
       } else {
         var prev = cycleMins[i-1];
         var delta = cm.minWeight - prev.minWeight;
