@@ -2956,8 +2956,7 @@
         // 仅首个周期：减重 = 周期内最重 - 周期内最轻
         var innerLoss = cm.maxWeight - cm.minWeight;
         if(innerLoss > 0.001){
-          deltaHtml = '<span class="cl-delta loss">↓ ' + innerLoss.toFixed(1) + ' 斤</span>'
-            + '<span class="cl-sub" style="font-size:12px;color:var(--text-light);">周期内</span>';
+          deltaHtml = '<span class="cl-delta loss">↓ ' + innerLoss.toFixed(1) + ' 斤</span>';
         } else {
           deltaHtml = '<span class="cl-delta first">首个周期</span>';
         }
